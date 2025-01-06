@@ -36,7 +36,6 @@ export default function SignInPage() {
       
       <div>
         <AuthLogo/>
-
       </div>
       <h1 className="my-4 text-5xl text-white font-custom1">Sign In</h1>
       <form onSubmit={handleSubmit} className="flex flex-col space-y-2 pt-10 w-64">

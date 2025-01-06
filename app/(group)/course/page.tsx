@@ -1,7 +1,7 @@
 // pages/CoursePage.tsx
 "use client";
-import Image from 'next/image';
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
