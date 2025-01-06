@@ -1,0 +1,103 @@
+"use client";
+import { AuthLogo } from "../_components/_media/authLogo";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function SignupPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Something went wrong");
+        return;
+      }
+
+      // On success, redirect to sign in
+      router.push("/signin");
+    } catch (err: any) {
+      console.error("Sign-up error:", err);
+      setErrorMsg(err.message || "Something went wrong");
+    }
+  };
+
+  return (
+    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-custom2">
+      <div>
+              <AuthLogo/>
+            </div>
+            <h1 className="my-10 text-5xl text-white font-custom1">Sign Up</h1>
+      <div className="w-72 flex flex-col">
+        
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+          <input
+            type="text"
+            placeholder="First Name"
+            className="border px-2 py-1 text-white bg-zinc-800 border-zinc-800"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Last Name"
+            className="border px-2 py-1  text-white bg-zinc-800 border-zinc-800"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            className="border px-2 py-1 text-white bg-zinc-800 border-zinc-800"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            className="border px-2 py-1 text-white bg-zinc-800 border-zinc-800"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            className="bg-secondary py-2 hover:bg-secondary-foreground transition-all"
+          >
+            Sign Up
+          </button>
+        </form>
+
+        <button
+        onClick={() => router.push("/signin")}
+        className="mt-6 text-white px-4 py-2 hover:bg-white hover:text-black transition-all"
+      >
+        sign in instead
+      </button>
+
+        {errorMsg && (
+          <p className="text-red-500 mt-2">
+            {errorMsg}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
