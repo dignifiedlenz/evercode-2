@@ -123,15 +123,15 @@ html {
 
 @font-face {
   font-family: 'Neima';
-  src: url('/public/fonts/neima.ttf') format('.ttf');
-  font-weight: 400;
+  src: url('/fonts/NEIMARegular.ttf') format('truetype');
+  font-weight: normal;
   font-style: normal;
   font-display: swap; /* optional, but recommended */
 }
 
 @font-face{
   font-family: 'Morion';
-  src: url('/public/fonts/Morion.woff') format('woff');
+  src: url('/fonts/Morion-Regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
