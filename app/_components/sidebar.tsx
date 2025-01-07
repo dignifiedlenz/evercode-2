@@ -12,7 +12,7 @@ import { signOut } from "next-auth/react";
 export default function Sidebar() {
 
     return ( 
-        <div className="h-screen w-36 flex flex-col items-center justify-between bg-black p-5 gap-y-6 border-r-2 border-r-secondary">
+        <div className="h-screen min-w-28 flex flex-col items-center justify-between bg-black p-5 gap-y-6 border-r-2 border-r-secondary">
             
             <Link href="/"
             className="opacity-65 hover:opacity-100"

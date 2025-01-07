@@ -229,14 +229,15 @@ const CoursePage: React.FC = () => {
             >
 
               <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">
-                <div className=' h-fit w-fit  items-center justify-center border border-secondary'>
+                <div className=' h-fit w-fit items-center justify-center border border-secondary'>
                 <ReactPlayer
                   url={currentVideo.videoUrl}
-                  
+                  playing
                   controls
                   height="30vw"
                   width="53vw"
                   onEnded={handleVideoEnd}
+            
                 />
               </div>
                 {/* Video Title Overlay */}
