@@ -171,12 +171,12 @@ const CoursePage: React.FC = () => {
   };
 
     return (
-      <div className="relative w-full h-screen bg-black text-white ">
+      <div className="relative w-screen h-screen bg-black text-white ">
         
         <div
         className="
-          w-[120vw]
-          h-[120vh]
+          w-full
+          h-full
           absolute
           inset-0
           bg-auto
@@ -184,7 +184,7 @@ const CoursePage: React.FC = () => {
           opacity-35
           pointer-events-none
           transition-all
-          duration-100
+          duration-35
           
         "
         style={{
@@ -228,8 +228,8 @@ const CoursePage: React.FC = () => {
               className="absolute w-full h-full flex items-center justify-center"
             >
 
-              <div className="w-full h-full flex text-3xl text-center font-custom1 flex-col items-center justify-center relative">
-                <div className=' h-fit w-fitflex flex-col items-center justify-center border border-secondary'>
+              <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">
+                <div className=' h-fit w-fit  items-center justify-center border border-secondary'>
                 <ReactPlayer
                   url={currentVideo.videoUrl}
                   

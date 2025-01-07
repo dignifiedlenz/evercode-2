@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const totalSections = course1Data.length;
   const completedSections = user.lastCompletedSession ?? 0;
   const progressPercentage =
-    ((completedSections + 1) / totalSections) * 100; // +1 to include the current section
+    ((completedSections) / totalSections) * 100; // +1 to include the current section
 
 
   
@@ -79,7 +79,6 @@ export default async function DashboardPage() {
           pointer-events-none
           transition-all
           duration-100
-          overflow-hidden
           -z-10
         "
         style={{
@@ -88,7 +87,7 @@ export default async function DashboardPage() {
       />
       <div className="w-[50%] h-96  px-10 py-8">
         <h1 className="text-6xl font-custom1 "> Welcome Back {user.firstName ? user.firstName : "to the Course"}!</h1>
-        <p className="mt-10 font-custom2">Your last completed session: 
+        <p className="mt-10 font-custom2">Your next video is waiting for you: 
         </p>
       
         <p className="text-3xl font-custom1 mb-10">
