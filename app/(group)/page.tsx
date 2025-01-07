@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import course1Data from "../_components/(semester1)/course1Data";
-course1Data
 import { Progress } from "@/components/ui/progress";
 
 

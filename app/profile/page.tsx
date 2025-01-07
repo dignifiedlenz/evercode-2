@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -38,10 +37,15 @@ export default function ProfilePage() {
           const data = await res.json();
           setFirstName(data.firstName || "");
           setLastName(data.lastName || "");
-        } catch (err: any) {
-          console.error(err);
-          setErrorMsg(err.message);
-        }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+              console.error(err.message);
+              setErrorMsg(err.message);
+            } else {
+              console.error("Unexpected error:", err);
+              setErrorMsg("An unexpected error occurred.");
+            }
+          }
       }
     }
     if (status === "authenticated") {
@@ -76,10 +80,16 @@ export default function ProfilePage() {
       // Optionally clear the password fields
       setOldPassword("");
       setNewPassword("");
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message);
-    }
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+          console.error(err.message);
+          setErrorMsg(err.message);
+        } else {
+          console.error("Unexpected error:", err);
+          setErrorMsg("An unexpected error occurred.");
+        }
+      }
+      
   }
 
   const handleBackToDashboard = () => {

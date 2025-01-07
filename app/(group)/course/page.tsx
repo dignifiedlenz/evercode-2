@@ -18,12 +18,12 @@ type Question = {
   correctAnswer: string;
 };
 
-type VideoSection = {
-  id: number;
-  title: string;
-  videoUrl: string;
-  questions: Question[];
-};
+//type VideoSection = {
+  //id: number;
+  //title: string;
+  //videoUrl: string;
+  //questions: Question[];
+//};
 
 // Sample course data with 5 video sections and corresponding questions
 

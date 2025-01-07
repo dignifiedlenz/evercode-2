@@ -22,11 +22,11 @@ export async function POST(request: Request) {
     }
 
     // 2) Build update data object
-    const updateData: any = {};
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
+    const updateData: any = {
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+    };
 
-    // 3) If user provided newPassword, require oldPassword check
     if (newPassword) {
       if (!oldPassword) {
         return NextResponse.json(
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+
       // Verify old password
       const isValid = await argon2.verify(user.password, oldPassword);
       if (!isValid) {
@@ -42,14 +43,23 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      // Hash new password
+
+      // Hash new password and add it to update data
       const hashed = await argon2.hash(newPassword);
       updateData.password = hashed;
     }
 
-    // 4) Update user
+    // If no updates are provided
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No fields provided to update" },
+        { status: 400 }
+      );
+    }
+
+    // 3) Update user
     const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: user.id },
       data: updateData,
     });
 
@@ -63,6 +73,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("PROFILE_UPDATE_ERROR:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
