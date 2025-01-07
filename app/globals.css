@@ -123,7 +123,7 @@ html {
 
 @font-face {
   font-family: 'Neima';
-  src: url('/fonts/neima.ttf') format('.ttf');
+  src: url('/fonts/neima.woff') format('.woff');
   font-weight: 400;
   font-style: normal;
   font-display: swap; /* optional, but recommended */

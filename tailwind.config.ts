@@ -57,7 +57,7 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
 		fontFamily: {
-			custom1: ['Neima', 'sans-serif'], // 'custom' is the key you'll use in class names
+			custom1: ['neima', 'sans-serif'], // 'custom' is the key you'll use in class names
 			custom2: ['Morion', 'sans-serif'], 
 		},
   	}

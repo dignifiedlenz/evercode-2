@@ -4,12 +4,16 @@ import { BookIcon } from "./_media/bookIcon";
 import Link from "next/link";
 import { Logo } from "./_media/logo";
 import { signOut } from "next-auth/react";
+import React, { useState } from "react";
 
 
 
-const Sidebar = () => {
+
+export default function Sidebar() {
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+
     return ( 
-        <div className="h-screen w-[100px] flex flex-col items-center justify-between bg-black p-5 gap-y-6 border-r-2 border-r-secondary">
+        <div className="h-screen w-36 flex flex-col items-center justify-between bg-black p-5 gap-y-6 border-r-2 border-r-secondary">
             
             <Link href="/"
             className="opacity-65 hover:opacity-100"
@@ -17,11 +21,11 @@ const Sidebar = () => {
                 <Logo/>
             </Link>
                    
-            <Link href="/"
-            className="opacity-65 hover:opacity-100"
+            <button
+                className="mb-4 p-2 opacity-65 hover:bg-opacity-100"
             >
                 <BookIcon/>
-            </Link>
+            </button>
             
             <button
                 onClick={() => signOut({ callbackUrl: "/" })}
@@ -35,4 +39,3 @@ const Sidebar = () => {
      );
 }
  
-export default Sidebar;

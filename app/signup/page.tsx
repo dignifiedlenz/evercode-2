@@ -28,11 +28,16 @@ export default function SignupPage() {
         return;
       }
 
-      // On success, redirect to sign in
-      router.push("/signin");
-    } catch (err: any) {
+     // On success, redirect to sign in
+     router.push("/signin");
+    } catch (err) {
       console.error("Sign-up error:", err);
-      setErrorMsg(err.message || "Something went wrong");
+
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("Something went wrong");
+      }
     }
   };
 
