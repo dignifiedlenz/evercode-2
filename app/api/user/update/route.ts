@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import argon2 from "argon2";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+type UpdateBody = {
+  firstName?: string;
+  lastName?: string;
+  oldPassword?: string;
+  newPassword?: string;
+};
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { firstName, lastName, oldPassword, newPassword } = await request.json();
+    const { firstName, lastName, oldPassword, newPassword } = (await request.json()) as UpdateBody;
 
     // 1) Find the user
     const user = await prisma.user.findUnique({
@@ -22,11 +29,17 @@ export async function POST(request: Request) {
     }
 
     // 2) Build update data object
-    const updateData: any = {
-      ...(firstName !== undefined && { firstName }),
-      ...(lastName !== undefined && { lastName }),
-    };
+    interface UpdateData {
+      firstName?: string;
+      lastName?: string;
+      password?: string;
+    }
 
+    const updateData: UpdateData = {};
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+
+    // If newPassword is provided, oldPassword is required
     if (newPassword) {
       if (!oldPassword) {
         return NextResponse.json(
@@ -44,7 +57,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // Hash new password and add it to update data
+      // Hash new password
       const hashed = await argon2.hash(newPassword);
       updateData.password = hashed;
     }

@@ -144,7 +144,7 @@ type Question = {
     {
       id: 3,
       title: 'Jesus Christ in the Creed',
-      videoUrl: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', // Replace with your S3 link
+      videoUrl: 'https://d3umrizzn3mmk.cloudfront.net/3.7.2+The+Father+Almighty%2C+Creator+of+heaven+and+earth.mp4', // Replace with your S3 link
       questions: [
         {
           id: 1,
@@ -206,7 +206,7 @@ type Question = {
     {
       id: 4,
       title: 'The Holy Spirit and the Church',
-      videoUrl: 'https://www.youtube.com/watch?v=3JZ_D3ELwOQ', // Replace with your S3 link
+      videoUrl: 'https://d3umrizzn3mmk.cloudfront.net/3.7.2+The+Father+Almighty%2C+Creator+of+heaven+and+earth.mp4', // Replace with your S3 link
       questions: [
         {
           id: 1,
@@ -268,7 +268,7 @@ type Question = {
     {
       id: 5,
       title: 'Eternal Life and Resurrection',
-      videoUrl: 'https://www.youtube.com/watch?v=l482T0yNkeo', // Replace with your S3 link
+      videoUrl: 'https://d3umrizzn3mmk.cloudfront.net/3.7.2+The+Father+Almighty%2C+Creator+of+heaven+and+earth.mp4', // Replace with your S3 link
       questions: [
         {
           id: 1,
@@ -330,7 +330,7 @@ type Question = {
     {
         id: 6,
         title: 'Eternal Life and Resurrection',
-        videoUrl: 'https://www.youtube.com/watch?v=l482T0yNkeo', // Replace with your S3 link
+        videoUrl: 'https://d3umrizzn3mmk.cloudfront.net/3.7.2+The+Father+Almighty%2C+Creator+of+heaven+and+earth.mp4', // Replace with your S3 link
         questions: [
           {
             id: 1,
