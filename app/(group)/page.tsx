@@ -73,7 +73,7 @@ export default async function DashboardPage() {
           h-[120vh]
           absolute
           inset-0
-          bg-auto
+          bg-cover
           bg-center
           opacity-25
           pointer-events-none
@@ -100,35 +100,30 @@ export default async function DashboardPage() {
           Resume Course
         </a>
       </div>
-      <div className="flex flex-col w-[50%] h-96 border border-zinc-700 rounded-xl px-10 py-8">
-        
-        <Link
-          href="/profile"
-          className="w-fit bg-secondary hover:bg-secondary-foreground text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
-          >
-          Edit Profile
-        </Link>
-        <Link
-          href="/profile"
-          className="w-fit bg-secondary hover:bg-secondary-foreground text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
-          >
-          Contact Support
-        </Link>
-      </div>
-      <div className="flex flex-col w-[50%] h-96 border border-zinc-700 rounded-xl px-10 py-8">
+      
+      <div className="flex flex-col w-fit h-fit space-y-5 border border-zinc-700 rounded-xl px-10 py-8">
         
        {/* Progress bar */}
         <div className="w-3/4 max-w-lg">
           <p className="font-custom1 text-white text-3xl">Your Progress in Semester 3</p>
           <Progress value={progressPercentage} className="mt-3 h-2 [&>div]:bg-secondary-foreground bg-white" />
           <p className="text-sm mt-2">{progressPercentage.toFixed(0)}% Complete</p>
-        </div>
+          </div>
+        <Link
+          href="/profile"
+          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
+          >
+          Edit Profile
+        </Link>
+        <Link
+          href="/profile"
+          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
+          >
+          Contact Support
+        </Link>
+        
       </div>
-      <div className="flex flex-col w-[50%] h-96 border border-zinc-700 rounded-xl px-10 py-8">
-        
-        
-
-       </div>
+      
 
       
       
