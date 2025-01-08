@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   // that sends them to `/course?session=${nextSessionIndex}`
   return (
     
-    <main className="pl-48 grid grid-cols-1 grid-rows-2 space-y-20 p-10 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
+    <main className="pl-48 grid grid-cols-1 grid-rows-2 space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
       <div
         className="
           pl-56
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           backgroundImage: `url('/310282rg.jpg')`,
         }}
       />
-      <div className="w-[50vw] h-[50vh]  px-10 py-8">
+      <div className="w-[50vw] h-[50vh]  px-10">
         <h1 className="text-6xl font-custom1 "> Welcome Back {user.firstName ? user.firstName : "to the Course"}!</h1>
         <p className="mt-10 font-custom2">Your next video is waiting for you: 
         </p>

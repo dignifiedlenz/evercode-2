@@ -30,9 +30,9 @@ export default function Sidebar() {
                     className="bg-black min-w-[40vw] h-full"
                 >
                     <SheetHeader>
-                        <SheetTitle>Information</SheetTitle>
+                        <SheetTitle className="text-3xl font-custom1 text-secondary">COURSE MAP</SheetTitle>
                         <SheetDescription>
-                            Add any description or details here.
+                           Coursemap available soon.
                         </SheetDescription>
                     </SheetHeader>
                     <div className="mt-4">

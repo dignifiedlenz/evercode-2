@@ -30,8 +30,7 @@ const CoursePage: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
 
-  // 4) Parallax state
-  const [bgPos, setBgPos] = useState({ x: 50, y: 50 });
+
 
   // 5) Derive current video & question
   const currentVideo = course1Data[currentVideoIndex];
@@ -61,20 +60,6 @@ const CoursePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [isLocked, cooldownTime]);
 
-  // 6C) Parallax background effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const speedFactor = 10;
-      const xFrac = e.clientX / window.innerWidth;
-      const yFrac = e.clientY / window.innerHeight;
-      setBgPos({
-        x: 50 - (0.2 - xFrac) * speedFactor,
-        y: 50 - (0.2 - yFrac) * speedFactor,
-      });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
 
   // If session is still loading, show a loading state
   if (status === "loading") {
