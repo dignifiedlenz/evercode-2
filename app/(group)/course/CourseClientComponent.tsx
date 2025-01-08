@@ -60,7 +60,6 @@ const CoursePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [isLocked, cooldownTime]);
 
-
   // If session is still loading, show a loading state
   if (status === "loading") {
     return (
@@ -166,7 +165,7 @@ const CoursePage: React.FC = () => {
           inset-0
           bg-auto
           bg-center
-          opacity-35
+          opacity-20
           pointer-events-none
           transition-all
           duration-100

@@ -7,6 +7,97 @@ import NoteEditor from "./NoteEditor";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "react-hot-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+// Same NoteContent type as in the parent or a shared file
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface NoteContent {
+  type: string;
+  content?: Array<NoteContent>;
+  [key: string]: any;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+interface NoteTakingSheetProps {
+  note: NoteContent | null;              // Current note from parent
+  setNote: React.Dispatch<React.SetStateAction<NoteContent | null>>;
+}
+
+export default function NoteTakingSheet({ note, setNote }: NoteTakingSheetProps) {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // If we always want to fetch on mount, do so:
+    // (Otherwise, move this logic to the parent or handle it only once.)
+    const fetchNote = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/notes", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setNote(data.content);
+        } else {
+          console.error("Failed to fetch note.");
+          toast.error("Failed to fetch note.");
+          setNote(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch note:", error);
+        toast.error("An error occurred while fetching the note.");
+        setNote(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchNote();
+  }, [setNote]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <DialogTitle>
+        <VisuallyHidden>Notes Sheet</VisuallyHidden>
+      </DialogTitle>
+      <div className="p-4 h-full flex flex-col">
+        <h2 className="text-3xl text-secondary font-custom1 mb-4">Notes</h2>
+        <ScrollArea className="h-full">
+        <div className="flex-grow overflow-y-auto p-4">
+          {isLoading ? (
+            <p>Loading...</p>
+          ) : (
+            
+            <NoteEditor
+              initialContent={note}
+              onLocalChange={(updatedContent) => {
+                // Store updated content in parent's state
+                setNote(updatedContent);
+              }}
+            />
+            
+          )}
+        </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}
+
+
+/*
+"use client";
+
+import React, { useState, useEffect } from "react";
+import NoteEditor from "./NoteEditor";
+import { DialogTitle } from "@radix-ui/react-dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { toast } from "react-hot-toast";
 import { NoteContent } from "@/types/note"; // Import the defined type
 
 interface NoteTakingSheetProps {
@@ -98,7 +189,7 @@ export default function NoteTakingSheet({ isOpen, onClose }: NoteTakingSheetProp
             <NoteEditor initialContent={note} onSave={saveNote} />
           )}
         </div>
-        {/* Close Button */}
+        
         <button
           className="mt-4 w-full text-white p-2 self-end rounded hover:bg-secondary-foreground transition-colors"
           onClick={handleClose}
@@ -109,3 +200,4 @@ export default function NoteTakingSheet({ isOpen, onClose }: NoteTakingSheetProp
     </div>
   );
 }
+*/

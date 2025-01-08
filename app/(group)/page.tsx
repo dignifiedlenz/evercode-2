@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
 import course1Data from "../_components/(semester1)/course1Data";
 import { Progress } from "@/components/ui/progress";
 
@@ -82,7 +81,7 @@ export default async function DashboardPage() {
           -z-10
         "
         style={{
-          backgroundImage: `url('/310282rg.jpg')`,
+          backgroundImage: `url('/516038ldsdl.jpg')`,
         }}
       />
       <div className="w-[50vw] h-[50vh]  px-10">
@@ -107,21 +106,6 @@ export default async function DashboardPage() {
       </div>
       
       <div className=" flex self-end flex-col w-fit h-fit space-y-2 px-10 py-8">
-        
-       {/* Progress bar */}
-        
-        <Link
-          href="/profile"
-          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-2 px-4 py-4 rounded hover:px-7 transition-all"
-          >
-          Edit Profile
-        </Link>
-        <Link
-          href="/profile"
-          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-2 px-4 py-4 rounded hover:px-7 transition-all"
-          >
-          Contact Support
-        </Link>
         
       </div>
       
