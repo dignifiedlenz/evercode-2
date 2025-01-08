@@ -104,8 +104,30 @@ export default function ProfilePage() {
   }
 
   return (
+
+
     <div className="flex flex-col items-center justify-center min-h-screen text-black">
-      <h1 className="text-2xl mb-4">Edit Profile</h1>
+
+<div
+        className="
+          pl-56
+          w-[120vw]
+          h-[120vh]
+          absolute
+          inset-0
+          bg-cover
+          bg-center
+          opacity-35
+          pointer-events-none
+          transition-all
+          duration-100
+          -z-10
+        "
+        style={{
+          backgroundImage: `url('/532328ldsdl.jpg')`,
+        }}
+      />
+      <h1 className="text-2xl mb-4 text-white font-custom1">Update your Credentials</h1>
       <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-64">
         <input
           type="text"
@@ -138,15 +160,15 @@ export default function ProfilePage() {
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white py-2 hover:bg-blue-700"
+          className="bg-secondary text-black py-2 hover:bg-secondary-foreground transition-all"
         >
           Update Profile
         </button>
         <button
         onClick={handleBackToDashboard}
-        className="mt-6 px-4 py-2 bg-gray-600 rounded text-white"
+        className="mt-6 px-4 py-2 rounded text-white hover:bg-white hover:text-black hover:pr-10 transition-all"
       >
-        Back to Dashboard
+        ← Back to Dashboard
       </button>
       </form>
        

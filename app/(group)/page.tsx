@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   // that sends them to `/course?session=${nextSessionIndex}`
   return (
     
-    <main className="grid grid-cols-2 grid-rows-2 space-x-4 p-10 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
+    <main className="pl-48 grid grid-cols-1 grid-rows-2 space-y-20 p-10 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
       <div
         className="
           pl-56
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           backgroundImage: `url('/310282rg.jpg')`,
         }}
       />
-      <div className="w-[50%] h-96  px-10 py-8">
+      <div className="w-[50vw] h-[50vh]  px-10 py-8">
         <h1 className="text-6xl font-custom1 "> Welcome Back {user.firstName ? user.firstName : "to the Course"}!</h1>
         <p className="mt-10 font-custom2">Your next video is waiting for you: 
         </p>
@@ -99,25 +99,26 @@ export default async function DashboardPage() {
         >
           Resume Course
         </a>
-      </div>
-      
-      <div className="flex flex-col w-fit h-fit space-y-5 border border-zinc-700 rounded-xl px-10 py-8">
-        
-       {/* Progress bar */}
-        <div className="w-3/4 max-w-lg">
+        <div className="py-20 w-3/4 max-w-lg">
           <p className="font-custom1 text-white text-3xl">Your Progress in Semester 3</p>
           <Progress value={progressPercentage} className="mt-3 h-2 [&>div]:bg-secondary-foreground bg-white" />
           <p className="text-sm mt-2">{progressPercentage.toFixed(0)}% Complete</p>
           </div>
+      </div>
+      
+      <div className=" flex self-end flex-col w-fit h-fit space-y-2 px-10 py-8">
+        
+       {/* Progress bar */}
+        
         <Link
           href="/profile"
-          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
+          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-2 px-4 py-4 rounded hover:px-7 transition-all"
           >
           Edit Profile
         </Link>
         <Link
           href="/profile"
-          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
+          className="w-fit text-white hover:bg-secondary-foreground hover:text-black my-2 px-4 py-4 rounded hover:px-7 transition-all"
           >
           Contact Support
         </Link>

@@ -64,12 +64,12 @@ const CoursePage: React.FC = () => {
   // 6C) Parallax background effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const speedFactor = 5;
+      const speedFactor = 10;
       const xFrac = e.clientX / window.innerWidth;
       const yFrac = e.clientY / window.innerHeight;
       setBgPos({
-        x: 50 - (2 - xFrac) * speedFactor,
-        y: 50 - (2 - yFrac) * speedFactor,
+        x: 50 - (0.2 - xFrac) * speedFactor,
+        y: 50 - (0.2 - yFrac) * speedFactor,
       });
     };
     window.addEventListener("mousemove", handleMouseMove);
@@ -184,12 +184,12 @@ const CoursePage: React.FC = () => {
           opacity-35
           pointer-events-none
           transition-all
-          duration-35
+          duration-100
           
         "
         style={{
           backgroundImage: `url('/creationofadam.jpg')`,
-          backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
+          //backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
         }}
       />
 
@@ -241,7 +241,7 @@ const CoursePage: React.FC = () => {
                 />
               </div>
                 {/* Video Title Overlay */}
-                <h2 className="absolute top-4 left-4 text-white px-3 py-1 rounded">
+                <h2 className="pl-24 pt-2 absolute top-4 left-4 text-white px-3 py-1 rounded">
                   {currentVideo.title}
                 </h2>
               </div>

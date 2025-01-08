@@ -43,7 +43,28 @@ export default function SignupPage() {
 
   return (
     <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-custom2">
+      <div
+        className="
+          pl-56
+          w-[120vw]
+          h-[120vh]
+          absolute
+          inset-0
+          bg-cover
+          bg-center
+          opacity-25
+          pointer-events-none
+          transition-all
+          duration-100
+          -z-10
+        "
+        style={{
+          backgroundImage: `url('/503698ldsdl.jpg')`,
+        }}
+      />
+
       <div>
+
               <AuthLogo/>
             </div>
             <h1 className="my-10 text-5xl text-white font-custom1">Sign Up</h1>

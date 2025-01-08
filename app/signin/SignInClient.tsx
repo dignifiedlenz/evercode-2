@@ -33,17 +33,38 @@ export default function SignInPage() {
   }
 
   return (
+
+    
     <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-custom2">
+      <div
+        className="
+          pl-56
+          w-[120vw]
+          h-[120vh]
+          absolute
+          inset-0
+          bg-cover
+          bg-center
+          opacity-35
+          pointer-events-none
+          transition-all
+          duration-100
+          -z-10
+        "
+        style={{
+          backgroundImage: `url('/516038ldsdl.jpg')`,
+        }}
+      />
       
       <div>
         <AuthLogo/>
       </div>
       <h1 className="my-4 text-5xl text-white font-custom1">Sign In</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-2 pt-10 w-64">
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 pt-10 w-64">
         <input
           type="text"
           placeholder="Email"
-          className="border px-2 py-1"
+          className="border rounded px-2 py-1"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -51,14 +72,14 @@ export default function SignInPage() {
         <input
           type="password"
           placeholder="Password"
-          className="border px-2 py-1"
+          className="border rounded px-2 py-1"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <button
           type="submit"
-          className="bg-secondary-foreground  py-2 hover:bg-secondary"
+          className="bg-secondary rounded py-2 hover:bg-secondary-foreground"
         >
           Sign In
         </button>
@@ -71,9 +92,9 @@ export default function SignInPage() {
       {/* Sign Up Button */}
       <button
         onClick={() => router.push("/signup")}
-        className="mt-6 text-white px-4 py-2 hover:bg-white hover:text-black transition-all"
+        className="mt-6 text-white px-4 py-2 rounded hover:bg-white hover:text-black hover:px-7 transition-all"
       >
-        sign up instead
+        sign up instead  →
       </button>
     </div>
   );
