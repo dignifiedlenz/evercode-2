@@ -70,7 +70,7 @@ export default function NoteTakingSheet({ note, setNote }: NoteTakingSheetProps)
         <ScrollArea className="h-full">
         <div className="flex-grow overflow-y-auto p-4">
           {isLoading ? (
-            <p>Loading...</p>
+            <p>Fetching your notes...</p>
           ) : (
             
             <NoteEditor

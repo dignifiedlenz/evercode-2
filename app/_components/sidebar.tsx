@@ -4,8 +4,8 @@ import { useState } from "react";
 import { BookIcon } from "./_media/bookIcon";
 import Link from "next/link";
 import { Logo } from "./_media/logo";
-import { signOut } from "next-auth/react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"; // Adjust the import based on your setup
+import { CourseMap } from "./Coursemap";
 
 export default function Sidebar() {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -15,13 +15,14 @@ export default function Sidebar() {
             <Link href="/" className="opacity-65 hover:opacity-100">
                 <Logo />
             </Link>
-
+            <div className="opacity-65 hover:bg-opacity-100">
             <button
                 onClick={() => setIsSheetOpen(true)}
-                className="mb-4 p-2 opacity-65 hover:bg-opacity-100"
+                className="mb-4 p-2 "
             >
                 <BookIcon />
             </button>
+            </div>
 
             {/* Sheet without overlay */}
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -36,18 +37,11 @@ export default function Sidebar() {
                         </SheetDescription>
                     </SheetHeader>
                     <div className="mt-4">
-                        {/* Render your information here */}
-                        <p>This is the information displayed in the sheet.</p>
+                        <CourseMap/>
                     </div>
                 </SheetContent>
             </Sheet>
 
-            <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="w-fit text-sm font-custom2 text-white hover:bg-secondary-foreground hover:text-black px-1 py-1 rounded"
-            >
-                Sign Out
-            </button>
         </div>
     );
 }

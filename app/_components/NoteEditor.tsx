@@ -69,7 +69,7 @@ export default function NoteEditor({ initialContent, onLocalChange }: NoteEditor
     <div>
     
       {/* Editor Content */}
-      <EditorContent editor={editor} className="p-4 min-h-[200px]" />
+      <EditorContent editor={editor} className="p-4 min-h-[200px] focus:hidden" />
     </div>
   );
 }

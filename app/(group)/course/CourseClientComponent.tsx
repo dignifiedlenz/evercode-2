@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import course1Data from '@/app/_components/(semester1)/course1Data';
+import Sidebar from './_components/Noteopener';
 
 
 const CoursePage: React.FC = () => { 
@@ -155,7 +156,11 @@ const CoursePage: React.FC = () => {
   };
 
     return (
-      <div className="relative w-screen h-screen bg-black text-white ">
+      
+
+      <div className="relative flex flex-row w-screen h-screen bg-black text-white ">
+       
+        <Sidebar/>
         
         <div
         className="
@@ -209,7 +214,7 @@ const CoursePage: React.FC = () => {
               animate="animate"
               exit="exit"
               transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="absolute w-full h-full flex items-center justify-center"
+              className="relative w-full h-full flex items-center justify-center"
             >
 
               <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">

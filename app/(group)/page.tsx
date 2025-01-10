@@ -64,7 +64,7 @@ export default async function DashboardPage() {
   // that sends them to `/course?session=${nextSessionIndex}`
   return (
     
-    <main className="pl-48 grid grid-cols-1 grid-rows-2 space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
+    <main className="pl-48 flex flex-col justify-center space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
       <div
         className="
           pl-56
@@ -96,6 +96,7 @@ export default async function DashboardPage() {
           href={`/course?session=${nextSessionIndex}`}
           className="bg-secondary hover:bg-secondary-foreground text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
         >
+          
           Resume Course
         </a>
         <div className="py-20 w-3/4 max-w-lg">

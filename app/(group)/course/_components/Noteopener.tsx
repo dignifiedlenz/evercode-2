@@ -11,8 +11,8 @@ import {
   SheetTrigger,
   SheetContent,
 } from "@/components/ui/sheet"; // Adjust the import path based on your project structure
-import NoteTakingSheet, { NoteContent } from "./NoteTakingSheet";
-import { QuillIcon } from "./_media/quillIcon";
+import NoteTakingSheet, { NoteContent } from "../../../_components/NoteTakingSheet";
+import { QuillIcon } from "../../../_components/_media/quillIcon";
 import { toast } from "react-hot-toast";
 
 export default function Sidebar() {
@@ -51,7 +51,7 @@ export default function Sidebar() {
     <Sheet open={isOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
         <button
-          className="fixed opacity-60 hover:opacity-100 bottom-8 right-8 z-50"
+          className="absolute opacity-60 hover:opacity-100 bottom-8 right-8 z-50 hover:rotate-12 transition-all"
           aria-label="Open Notes"
         >
           <QuillIcon/>

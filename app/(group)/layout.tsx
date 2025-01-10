@@ -1,5 +1,3 @@
-
-import Noteopener from "../_components/Noteopener";
 import Sidebar from "../_components/sidebar";
 import UserMenu from "../_components/UserMenu";
 
@@ -21,9 +19,7 @@ const GroupLayout = ({
         </div>
         
         
-        <div className="fixed bottom-5 right-5 z-50">
-        <Noteopener/>
-        </div>
+        
         <div className="h-full w-full flex flex-col items-center font-custom2">
             {children}
         </div>
