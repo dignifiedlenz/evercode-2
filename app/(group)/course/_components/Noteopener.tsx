@@ -15,7 +15,7 @@ import NoteTakingSheet, { NoteContent } from "../../../_components/NoteTakingShe
 import { QuillIcon } from "../../../_components/_media/quillIcon";
 import { toast } from "react-hot-toast";
 
-export default function Sidebar() {
+export default function Notes() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [noteContent, setNoteContent] = useState<NoteContent | null>(null);
 

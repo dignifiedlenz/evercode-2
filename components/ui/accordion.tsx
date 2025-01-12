@@ -1,6 +1,7 @@
 import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 const Accordion = AccordionPrimitive.Root
 
@@ -11,7 +12,7 @@ const AccordionItem = React.forwardRef<
   <AccordionPrimitive.Item
     ref={ref}
     className={cn(
-      "border-b",
+      "",
       className
     )}
     {...props}
@@ -32,7 +33,9 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}
     >
-      <img
+      <Image
+        width={80}
+        height={80}
         src="/EvermodeArrow.svg"
         alt="Toggle"
         className="h-8 w-8 shrink-0 transition-transform duration-200 mr-3 group-data-[state=open]:rotate-90"

@@ -1,53 +1,104 @@
-// pages/CoursePage.tsx
-"use client";
+// src/app/course/CourseClientComponent.tsx
+
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import course1Data from '@/app/_components/(semester1)/course1Data';
-import Sidebar from './_components/Noteopener';
+import { useRouter, useSearchParams } from 'next/navigation';
+import courseData from '@/app/_components/(semester1)/courseData';
+import { useProgress } from '@/context/ProgressContext';
+import Notes from './_components/Noteopener';
+import { Semester, Chapter, Unit } from '@/types/course';
 
+interface FoundUnit {
+  semester: Semester;
+  chapter: Chapter;
+  unit: Unit;
+}
 
-const CoursePage: React.FC = () => { 
-  // 1) Auth session & router
-  const { data: session, status } = useSession();
+const CourseClientComponent: React.FC = () => {
+  const { status } = useSession(); // Removed 'session'
   const router = useRouter();
-
-  // 2) Get ?session=<index> from URL
   const searchParams = useSearchParams();
-  const sessionParam = searchParams.get("session");
-  const initialIndex = sessionParam ? parseInt(sessionParam, 10) : 0;
 
-  // 3) Local state for course logic
-  // **Important**: Use initialIndex here!
-  const [currentVideoIndex, setCurrentVideoIndex] = useState<number>(initialIndex);
+  const { markUnitAsCompleted } = useProgress(); // Removed 'completedUnits'
+
+  const [foundUnit, setFoundUnit] = useState<FoundUnit | null>(null);
+
+  const [isQuestionSection, setIsQuestionSection] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [completedSections, setCompletedSections] = useState<number[]>([]);
-  const [isQuestions, setIsQuestions] = useState(false);
   const [hasWrongAnswer, setHasWrongAnswer] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
 
+  // Read the 'session' query parameter
+  const sessionParam = searchParams.get("session");
 
-
-  // 5) Derive current video & question
-  const currentVideo = course1Data[currentVideoIndex];
-  const currentQuestion = currentVideo.questions[currentQuestionIndex];
-
-
-  // 6) useEffect hooks
-
-  // 6A) Redirect if unauthenticated
+  // Redirect unauthenticated users to sign-in page
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/signin");
     }
   }, [status, router]);
 
-  // 6B) Handle 20-second lockout countdown
+  // Debugging: Log the current session parameter
+  useEffect(() => {
+    console.log("Current Session Parameter:", sessionParam);
+  }, [sessionParam]);
+
+  // Fetch and set the current unit based on sessionParam
+  useEffect(() => {
+    console.log("Fetching unit for session:", sessionParam);
+
+    const sessionId = sessionParam;
+
+    if (!sessionId) {
+      // If no session is specified, navigate to the first unit
+      const firstUnit = courseData[0]?.chapters[0]?.units[0];
+      if (firstUnit) {
+        console.log("Redirecting to first unit:", firstUnit.id);
+        router.push(`/course?session=${firstUnit.id}`);
+      } else {
+        // Handle case where courseData is empty
+        console.error("No units available in courseData.");
+      }
+      return;
+    }
+
+    // Find the unit in courseData
+    let found: FoundUnit | null = null;
+
+    for (const semester of courseData) {
+      for (const chapter of semester.chapters) {
+        for (const unit of chapter.units) {
+          if (unit.id === sessionId) {
+            found = { semester, chapter, unit };
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (found) break;
+    }
+
+    if (found) {
+      console.log("Found Unit:", found);
+      setFoundUnit(found);
+    } else {
+      // If unit not found, redirect to first unit
+      console.error(`Unit with id ${sessionId} not found.`);
+      const firstUnit = courseData[0]?.chapters[0]?.units[0];
+      if (firstUnit) {
+        router.push(`/course?session=${firstUnit.id}`);
+      } else {
+        console.error("No units available in courseData.");
+      }
+    }
+  }, [sessionParam, router]);
+
+  // Handle cooldown timer for incorrect answers
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isLocked && cooldownTime > 0) {
@@ -61,111 +112,113 @@ const CoursePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [isLocked, cooldownTime]);
 
-  // If session is still loading, show a loading state
-  if (status === "loading") {
-    return (
-      <p className="text-white h-screen flex items-center justify-center">
-        Loading session...
-      </p>
-    );
-  }
-
-  // 7) Animation Variants
-  const sectionVariants = {
-    initial: { y: "50%", opacity: 0 },
-    animate: { y: "0%", opacity: 1 },
-    exit: { y: "-50%", opacity: 0 },
-  };
-
-  const questionVariants = {
-    initial: { x: "50%", opacity: 0 },
-    animate: { x: "0%", opacity: 1 },
-    exit: { x: "-25%", opacity: 0 },
-  };
-
-  // 8) Helper to update user progress in DB (optional)
-  async function updateProgressInDB(newSessionIndex: number) {
-    if (!session?.user?.email) return;
-    try {
-      const res = await fetch("/api/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newSessionIndex }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        console.error("Error updating progress:", data.error);
-      } else {
-        console.log("Progress updated successfully");
-      }
-    } catch (err) {
-      console.error("Progress update error:", err);
+  // Debugging: Log the received foundUnit
+  useEffect(() => {
+    if (foundUnit) {
+      console.log("CourseClientComponent received foundUnit:", foundUnit);
     }
-  }
+  }, [foundUnit]);
 
-  // 9) Handlers
-
+  // Handle video end
   const handleVideoEnd = () => {
-    setIsQuestions(true);
+    setIsQuestionSection(true);
+    console.log("Video ended for unit:", foundUnit?.unit.id);
   };
 
-  const handleCorrectAnswer = async () => {
-    if (currentQuestionIndex < currentVideo.questions.length - 1) {
-      // Move to next question
+  // Handle correct answer
+  const handleCorrectAnswer = () => {
+    if (!foundUnit) return;
+
+    console.log("Correct answer selected.");
+    if (currentQuestionIndex < foundUnit.unit.video.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Mark section as completed
-      setCompletedSections([...completedSections, currentVideo.id]);
+      // Mark unit as completed
+      markUnitAsCompleted(foundUnit.chapter.id, foundUnit.unit.id);
+      setIsQuestionSection(false);
+      setCurrentQuestionIndex(0);
 
-      // Update DB progress
-      const nextSessionIndex = currentVideoIndex + 1;
-      await updateProgressInDB(nextSessionIndex);
-
-      if (currentVideoIndex < course1Data.length - 1) {
-        // Move to next video
-        setCurrentVideoIndex(currentVideoIndex + 1);
-        setCurrentQuestionIndex(0);
-        setIsQuestions(false);
+      // Navigate to next unit if available
+      const nextUnit = getNextUnit(foundUnit.unit.id);
+      if (nextUnit) {
+        console.log("Navigating to next unit:", nextUnit.id);
+        router.push(`/course?session=${nextUnit.id}`);
       } else {
         // Course completed
-        setCompletedSections([...completedSections, currentVideo.id]);
-        alert("🎉 Congratulations! You have completed the course.");
+        alert("🎉 Congratulations! You have completed the entire course.");
+        // Optionally, redirect or reset
       }
     }
   };
 
-  const handleDotClick = (index: number) => {
-    if (completedSections.includes(course1Data[index].id)) {
-      setCurrentVideoIndex(index);
-      setCurrentQuestionIndex(0);
-      setIsQuestions(false);
-      setHasWrongAnswer(false);
-    }
+  // Handle incorrect answer
+  const handleIncorrectAnswer = () => {
+    console.log("Incorrect answer selected.");
+    setHasWrongAnswer(true);
+    setIsLocked(true);
+    setCooldownTime(20);
   };
 
-  const checkAnswer = (selected: string) => {
-    if (isLocked) return;
+  // Handle answer selection
+  const handleAnswerSelection = (selected: string) => {
+    if (isLocked) {
+      console.log("Answer selection locked.");
+      return;
+    }
     if (selected === currentQuestion.correctAnswer) {
-      handleCorrectAnswer();
       setHasWrongAnswer(false);
+      handleCorrectAnswer();
     } else {
-      setHasWrongAnswer(true);
-      setIsLocked(true);
-      setCooldownTime(20);
+      handleIncorrectAnswer();
     }
   };
 
-    return (
-      
+  // Function to get the next unit in order
+  const getNextUnit = (currentUnitId: string): Unit | null => {
+    const allUnits: { chapterId: string; unit: Unit }[] = [];
+    courseData.forEach((sem) => {
+      sem.chapters.forEach((chap) => {
+        chap.units.forEach((uni) => {
+          allUnits.push({ chapterId: chap.id, unit: uni });
+        });
+      });
+    });
 
-      <div className="relative flex flex-row w-screen h-screen bg-black text-white ">
-       
-        <Sidebar/>
-        
-        <div
+    const currentIndex = allUnits.findIndex((u) => u.unit.id === currentUnitId);
+    if (currentIndex >= 0 && currentIndex < allUnits.length - 1) {
+      return allUnits[currentIndex + 1].unit;
+    }
+    return null;
+  };
+
+  if (status === "loading" || !foundUnit) {
+    return <p className="text-white">Loading...</p>;
+  }
+
+  const currentVideo = foundUnit.unit.video;
+  const currentQuestion = currentVideo.questions[currentQuestionIndex];
+
+  // Animation Variants
+  const verticalSlide = {
+    initial: { y: '100%', opacity: 0 },
+    animate: { y: '0%', opacity: 1 },
+    exit: { y: '-100%', opacity: 0 },
+  };
+
+  const horizontalSlide = {
+    initial: { x: '100%', opacity: 0 },
+    animate: { x: '0%', opacity: 1 },
+    exit: { x: '-100%', opacity: 0 },
+  };
+
+  return (
+    <div className="relative flex flex-row w-screen h-screen bg-black text-white">
+      {/* Sidebar for Notes */}
+      <Notes />
+
+      {/* Background Overlay */}
+      <div
         className="
-          w-full
-          h-full
           absolute
           inset-0
           bg-auto
@@ -174,51 +227,27 @@ const CoursePage: React.FC = () => {
           pointer-events-none
           transition-all
           duration-100
-          
         "
         style={{
-          backgroundImage: `url('/creationofadam.jpg')`,
-          //backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
+          backgroundImage: `url('${foundUnit.chapter.backgroundImage}')`,
         }}
       />
 
-        {/* Progress Dots */}
-        <div className="fixed top-1/2 right-4 transform -translate-y-1/2 flex flex-col items-center space-y-10 z-10">
-          {course1Data.map((video, index) => (
-            <button
-              key={video.id}
-              className={`w-2 h-2 rounded-full ${
-                currentVideoIndex === index && !isQuestions
-                  ? "bg-secondary w-3 h-3"
-                  : completedSections.includes(video.id)
-                  ? "bg-secondary-foreground"
-                  : "bg-gray-600"
-              } cursor-pointer transition-colors`}
-              onClick={() => handleDotClick(index)}
-              disabled={!completedSections.includes(video.id)}
-              title={video.title}
-            ></button>
-          ))}
-        </div>
-
-        {/* Sections Container */}
-        <AnimatePresence initial={false} mode="wait">
-          {!isQuestions ? (
-             
-
-            // Video Section
-            <motion.div
-              key={`video-${currentVideo.id}`}
-              variants={sectionVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="relative w-full h-full flex items-center justify-center"
-            >
-
-              <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">
-                <div className=' h-fit w-fit items-center justify-center border border-secondary'>
+      {/* Main Content Area */}
+      <AnimatePresence mode="wait">
+        {!isQuestionSection ? (
+          // Video Section with Vertical Sliding
+          <motion.div
+            key={`video-${foundUnit.unit.id}`}
+            variants={verticalSlide}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="relative w-full h-full flex items-center justify-center"
+          >
+            <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">
+              <div className="h-fit w-fit bg-black items-center justify-center border border-secondary">
                 <ReactPlayer
                   url={currentVideo.videoUrl}
                   playing
@@ -226,94 +255,96 @@ const CoursePage: React.FC = () => {
                   height="30vw"
                   width="53vw"
                   onEnded={handleVideoEnd}
-            
                 />
               </div>
-                {/* Video Title Overlay */}
-                <h2 className="pl-24 pt-2 absolute top-4 left-4 text-white px-3 py-1 rounded">
-                  {currentVideo.title}
-                </h2>
-              </div>
-            </motion.div>
-          ) : (
-            // Questions Section
-            <motion.div
-              key={`questions-${currentVideo.id}`}
-              variants={sectionVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="absolute w-full h-full flex flex-col items-center justify-center"
-            >
-              <div className="w-full flex flex-col items-center max-w-2xl py-20 px-20 relative border bg-black bg-opacity-30 rounded-lg border-secondary">
+              {/* Display Chapter Title */}
               
-                {/* Questions Section Title Overlay */}
-                <h2 className="absolute top-4 flex flex-col items-center text-center font-custom1 text-3xl bg-opacity-75 text-white px-3 py-1 rounded"
                 
-                >
-                  {currentVideo.title}
-                  <div className='mt-8 h-[1px] w-40 bg-secondary'></div>
-                </h2>
-
               
-  
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentQuestion.id}
-                    variants={questionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="space-y-6 mt-10 text-center border-1-secondary z-30"
-                  >
-                   
+              <motion.h3
+                className="pl-24 absolute top-6 left-4 text-white text-left"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+              >
+                <p className='font-custom2 text-sm text-zinc-100'>{foundUnit.chapter.title}</p>
+                <p>{currentVideo.title}</p>
+                
+              </motion.h3>
+              
+            </div>
+          </motion.div>
+        ) : (
+          // Questions Section with Horizontal Sliding
+          <motion.div
+            key={`questions-${foundUnit.unit.id}`}
+            variants={verticalSlide}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.7, ease: "easeInOut" }}
+            className="absolute w-full h-full flex flex-col items-center justify-center"
+          >
+            <div className="w-full flex flex-col items-center max-w-2xl py-20 px-20 relative border bg-black bg-opacity-30 rounded-lg border-secondary">
+              {/* Questions Section Title Overlay */}
+              <h3 className='top-2 flex flex-col items-center text-center font-custom2 text-sm bg-opacity-75 text-white px-3 py-1 rounded'>{foundUnit.chapter.title}</h3>
+              <h2 className=" top-6 flex flex-col items-center text-center font-custom1 text-3xl bg-opacity-75 text-white px-3 py-1 rounded">
+                {currentVideo.title}
+                <div className="mt-6 h-[1px] w-40 bg-secondary"></div>
+              </h2>
 
-                    <h3 className="text-xl opacity-70 font-custom1 z-20">
-                      Question {currentQuestionIndex + 1} of{" "}
-                      {currentVideo.questions.length}
-                    </h3>
-                    <p className="text-lg">{currentQuestion.question}</p>
-                    <div className="space-y-4">
-                      {currentQuestion.options.map((option, idx) => (
-                        <button
-                          key={idx}
-                          className={`w-full px-4 py-2 bg-zinc-950 rounded hover:bg-zinc-700 transition-colors text-left text-white text-lg ${
-                            isLocked ? "cursor-not-allowed opacity-50" : ""
-                          }`}
-                          onClick={() => checkAnswer(option)}
-                          disabled={isLocked}
-                          aria-label={`Answer option ${option}`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Error Message */}
-                    {isLocked && (
-                      <div className="text-red-500 mt-4">
-                        Whoops! That was not correct. Wait {cooldownTime} seconds to try
-                        again!
-                      </div>
-                    )}
-                    {/* Back to Video Button */}
-                    {hasWrongAnswer && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentQuestion.id}
+                  variants={horizontalSlide}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="space-y-6 mt-10 text-center border-1-secondary z-30"
+                >
+                  <h3 className="text-xl opacity-70 font-custom1 z-20">
+                    Question {currentQuestionIndex + 1} of {currentVideo.questions.length}
+                  </h3>
+                  <p className="text-2xl">{currentQuestion.question}</p>
+                  <div className="space-y-4">
+                    {currentQuestion.options.map((option: string, idx: number) => (
                       <button
-                        className="mt-6 px-4 py-2 bg-secondary rounded hover:bg-secondary-foreground transition-colors text-black text-lg"
-                        onClick={() => setIsQuestions(false)}
+                        key={idx}
+                        className={`w-full px-4 py-2 bg-zinc-950 rounded hover:bg-zinc-700 hover:border-1-secondary transition-colors text-center text-white text-lg ${
+                          isLocked ? "cursor-not-allowed opacity-50" : ""
+                        }`}
+                        onClick={() => handleAnswerSelection(option)}
+                        disabled={isLocked}
+                        aria-label={`Answer option ${option}`}
                       >
-                        ← Back to Video
+                        {option}
                       </button>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
-  
-  export default CoursePage;
+                    ))}
+                  </div>
+                  {/* Error Message */}
+                  {isLocked && (
+                    <div className="text-red-500 mt-4">
+                      Whoops! That was not correct. Wait {cooldownTime} seconds to try again!
+                    </div>
+                  )}
+                  {/* Back to Video Button */}
+                  {hasWrongAnswer && (
+                    <button
+                      className="mt-6 px-4 py-2 bg-secondary rounded hover:bg-secondary-foreground transition-colors text-black text-lg"
+                      onClick={() => setIsQuestionSection(false)}
+                    >
+                      ← Back to Video
+                    </button>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default CourseClientComponent;

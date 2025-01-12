@@ -1,14 +1,17 @@
-
-// app/page.tsx (Server Component by default in Next.js 13)
+// src/app/(group)/page.tsx
 
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import course1Data from "../_components/(semester1)/course1Data";
-import { Progress } from "@/components/ui/progress";
+import courseData from "../_components/(semester1)/courseData";
+import DashboardContent from "./course/_components/DashboardContent";
+import { Unit } from "@/types/course";
 
-
+// Define the shape of completedUnits
+interface CompletedUnits {
+  [chapterId: string]: string[];
+}
 
 export default async function DashboardPage() {
   // 1. Check session server-side
@@ -24,46 +27,119 @@ export default async function DashboardPage() {
   });
 
   if (!dbUser) {
-    // If no user found, sign out or handle error
-    // For now, redirect to signup
+    // If no user found, redirect to signup
     redirect("/signup");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  // 3. Destructure with default value and type assertion
+  const { completedChapters = [], completedUnits = {} } = dbUser;
+  const units: CompletedUnits = completedUnits as CompletedUnits;
+
+  // 4. Determine the next unit to resume
+  let nextSemesterIndex = 0;
+  let nextChapterIndex = 0;
+  let nextUnitIndex = 0;
+  let foundNextUnit = false;
+
+  for (let semesterIdx = 0; semesterIdx < courseData.length; semesterIdx++) {
+    const semester = courseData[semesterIdx];
+    for (let chapterIdx = 0; chapterIdx < semester.chapters.length; chapterIdx++) {
+      const chapter = semester.chapters[chapterIdx];
+
+      for (let unitIdxIter = 0; unitIdxIter < chapter.units.length; unitIdxIter++) {
+        const unit = chapter.units[unitIdxIter];
+        const isUnitCompleted = units[chapter.id]?.includes(unit.id) ?? false;
+
+        if (!isUnitCompleted) {
+          // Found the next incomplete unit
+          nextSemesterIndex = semesterIdx;
+          nextChapterIndex = chapterIdx;
+          nextUnitIndex = unitIdxIter;
+          foundNextUnit = true;
+          break;
+        }
+      }
+
+      if (foundNextUnit) break;
+    }
+
+    if (foundNextUnit) break;
+  }
+
+  // If all units are completed
+  if (!foundNextUnit) {
+    // Set indices to -1 to indicate completion
+    nextSemesterIndex = -1;
+    nextChapterIndex = -1;
+    nextUnitIndex = -1;
+  }
+
+  // 5. Get the title and chapter of the last completed unit
+  let lastCompletedTitle = "";
+  let lastCompletedChapterTitle = "";
+
+  for (let semesterIdx = 0; semesterIdx < courseData.length; semesterIdx++) {
+    const semester = courseData[semesterIdx];
+    for (let chapterIdx = 0; chapterIdx < semester.chapters.length; chapterIdx++) {
+      const chapter = semester.chapters[chapterIdx];
+      if (completedChapters.includes(chapter.id)) {
+        for (let unitIdxIter = 0; unitIdxIter < chapter.units.length; unitIdxIter++) {
+          const unit = chapter.units[unitIdxIter];
+          if (units[chapter.id]?.includes(unit.id)) {
+            lastCompletedTitle = unit.title;
+            lastCompletedChapterTitle = chapter.title;
+          }
+        }
+      }
+    }
+  }
+
+  // 6. Calculate total units and completed units for progress percentage
+  let totalUnits = 0;
+  let totalCompletedUnits = 0;
+
+  courseData.forEach((semester) => {
+    semester.chapters.forEach((chapter) => {
+      totalUnits += chapter.units.length;
+      totalCompletedUnits += units[chapter.id]?.length ?? 0;
+    });
   });
-  if (!user) {
-    redirect("/signup");
-  }
 
-  
-  // 3. Logic for next session
-  // If dbUser.lastCompletedSession = 2, next session is 3, etc.
-  // You can clamp it so it doesn't exceed the total course length
-  const nextSessionIndex = (dbUser.lastCompletedSession ?? 0);
+  const progressPercentage = (totalCompletedUnits / totalUnits) * 100;
 
-  const lastIndex = user.lastCompletedSession ?? 0;
+  // 7. Get the title and chapter of the next unit
+  let nextUnitTitle = "";
+  let nextUnitChapterTitle = "";
 
-  let lastTitle = "";
-  if (lastIndex < course1Data.length) {
-    lastTitle = course1Data[lastIndex].title; 
+  let nextUnit: Unit | null = null; // Replaced 'any' with 'Unit | null'
+
+  if (foundNextUnit) {
+    nextUnit = courseData[nextSemesterIndex].chapters[nextChapterIndex].units[nextUnitIndex];
+    nextUnitTitle = nextUnit.title;
+    nextUnitChapterTitle = courseData[nextSemesterIndex].chapters[nextChapterIndex].title;
   } else {
-    // That means they've completed all sessions in courseData
-    lastTitle = "All sessions completed in Course 1!";
+    nextUnitTitle = "All sessions completed in the course!";
+    nextUnitChapterTitle = "";
   }
 
+  // 8. Prepare the "Resume Course" link with the new URL structure
+  const resumeCourseLink = foundNextUnit
+    ? `/course?session=${nextUnit?.id}` // Changed URL structure
+    : "";
 
-  const totalSections = course1Data.length;
-  const completedSections = user.lastCompletedSession ?? 0;
-  const progressPercentage =
-    ((completedSections) / totalSections) * 100; // +1 to include the current section
+  // 9. Get the title of the last completed unit for display
+  const lastCompletedUnitDisplay = lastCompletedTitle
+    ? lastCompletedTitle
+    : "No units completed yet.";
 
+  const lastCompletedChapterDisplay = lastCompletedTitle
+    ? lastCompletedChapterTitle
+    : "";
 
-  
-  // We'll pass nextSessionIndex to a button or link
-  // that sends them to `/course?session=${nextSessionIndex}`
+  // 10. Handle when all units are completed
+  const allUnitsCompleted = progressPercentage === 100;
+
   return (
-    
     <main className="pl-48 flex flex-col justify-center space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
       <div
         className="
@@ -81,38 +157,21 @@ export default async function DashboardPage() {
           -z-10
         "
         style={{
-          backgroundImage: `url('/516038ldsdl.jpg')`,
+          backgroundImage: foundNextUnit
+            ? `url('${courseData[nextSemesterIndex].chapters[nextChapterIndex].backgroundImage}')`
+            : `url('${courseData[courseData.length - 1].chapters[courseData[courseData.length - 1].chapters.length - 1].backgroundImage}')`,
         }}
       />
-      <div className="w-[50vw] h-[50vh]  px-10">
-        <h1 className="text-6xl font-custom1 "> Welcome Back {user.firstName ? user.firstName : "to the Course"}!</h1>
-        <p className="mt-10 font-custom2">Your next video is waiting for you: 
-        </p>
-      
-        <p className="text-3xl font-custom1 mb-10">
-        <strong>{lastTitle}</strong>
-        </p>
-        <a
-          href={`/course?session=${nextSessionIndex}`}
-          className="bg-secondary hover:bg-secondary-foreground text-black my-10 px-4 py-4 rounded hover:px-7 transition-all"
-        >
-          
-          Resume Course
-        </a>
-        <div className="py-20 w-3/4 max-w-lg">
-          <p className="font-custom1 text-white text-3xl">Your Progress in Semester 3</p>
-          <Progress value={progressPercentage} className="mt-3 h-2 [&>div]:bg-secondary-foreground bg-white" />
-          <p className="text-sm mt-2">{progressPercentage.toFixed(0)}% Complete</p>
-          </div>
-      </div>
-      
-      <div className=" flex self-end flex-col w-fit h-fit space-y-2 px-10 py-8">
-        
-      </div>
-      
-
-      
-      
+      {/* 2. Use the DashboardContent client component */}
+      <DashboardContent
+        nextUnitTitle={nextUnitTitle}
+        nextUnitChapterTitle={nextUnitChapterTitle}
+        resumeCourseLink={resumeCourseLink}
+        allUnitsCompleted={allUnitsCompleted}
+        progressPercentage={progressPercentage}
+        lastCompletedUnitDisplay={lastCompletedUnitDisplay}
+        lastCompletedChapterDisplay={lastCompletedChapterDisplay}
+      />
     </main>
   );
 }
