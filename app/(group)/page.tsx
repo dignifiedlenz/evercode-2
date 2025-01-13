@@ -35,6 +35,8 @@ export default async function DashboardPage() {
   const { completedChapters = [], completedUnits = {} } = dbUser;
   const units: CompletedUnits = completedUnits as CompletedUnits;
 
+  const isAdmin = dbUser.role === "admin";
+
   // 4. Determine the next unit to resume
   let nextSemesterIndex = 0;
   let nextChapterIndex = 0;
@@ -172,6 +174,16 @@ export default async function DashboardPage() {
         lastCompletedUnitDisplay={lastCompletedUnitDisplay}
         lastCompletedChapterDisplay={lastCompletedChapterDisplay}
       />
+           {isAdmin && (
+        <div className="text-right pr-8">
+          <a
+            href="/adminDashboard"
+            className="fixed bottom-8 right-10 px-4 py-2 text-white rounded hover:bg-secondary-foreground transition-colors"
+          >
+            Admin Dashboard
+          </a>
+        </div>
+      )}
     </main>
   );
 }

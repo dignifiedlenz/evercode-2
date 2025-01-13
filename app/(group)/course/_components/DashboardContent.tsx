@@ -22,19 +22,19 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.3, // Delay between each child animation
+      staggerChildren: 0.1, // Delay between each child animation
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, x: -50 },
+  hidden: { opacity: 0, y: 30 },
   visible: { 
     opacity: 1, 
-    x: 0,
+    y: 0,
     transition: {
-      duration: 0.5, // Increased duration for a slower animation
-      ease: "easeIn", // Easing function for a smoother start
+      duration: 0.8, // Increased duration for a slower animation
+      ease: "easeOut", // Easing function for a smoother start
     },
   },
 };

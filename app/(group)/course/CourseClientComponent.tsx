@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import ReactPlayer from 'react-player';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
@@ -11,6 +11,7 @@ import courseData from '@/app/_components/(semester1)/courseData';
 import { useProgress } from '@/context/ProgressContext';
 import Notes from './_components/Noteopener';
 import { Semester, Chapter, Unit } from '@/types/course';
+import { NotesContext } from '@/context/NotesContext';
 
 interface FoundUnit {
   semester: Semester;
@@ -23,6 +24,8 @@ const CourseClientComponent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const { isNotesOpen } = useContext(NotesContext); // Consume the context
+
   const { markUnitAsCompleted } = useProgress(); // Removed 'completedUnits'
 
   const [foundUnit, setFoundUnit] = useState<FoundUnit | null>(null);
@@ -33,8 +36,19 @@ const CourseClientComponent: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
 
+  // Custom Controls State
+  const playerRef = useRef<ReactPlayer>(null); // Reference to ReactPlayer
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(true);
+  const [volume, setVolume] = useState(0.8);
+  const [muted, setMuted] = useState(false);
+  const [played, setPlayed] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   // Read the 'session' query parameter
   const sessionParam = searchParams.get("session");
+
 
   // Redirect unauthenticated users to sign-in page
   useEffect(() => {
@@ -203,16 +217,110 @@ const CourseClientComponent: React.FC = () => {
     initial: { y: '100%', opacity: 0 },
     animate: { y: '0%', opacity: 1 },
     exit: { y: '-100%', opacity: 0 },
+    transition: {
+      duration: 0.8,
+      ease: "easeInOut",
+    },
   };
 
   const horizontalSlide = {
     initial: { x: '100%', opacity: 0 },
     animate: { x: '0%', opacity: 1 },
     exit: { x: '-100%', opacity: 0 },
+    transition: {
+      duration: 0.7,
+      ease: "easeInOut",
+    },
+  };
+
+  // Custom Control Handlers
+  const togglePlayPause = () => {
+    setPlaying((prev) => !prev);
+  };
+
+  const toggleMute = () => {
+    setMuted((prev) => !prev);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setVolume(value);
+    // if volume > 0, unmute
+    if (value > 0) {
+      setMuted(false);
+    }
+  };
+
+
+  const handleProgress = (state: { played: number }) => {
+    setPlayed(state.played);
+  };
+
+  const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTo = parseFloat(e.target.value);
+    playerRef.current?.seekTo(seekTo);
+    setPlayed(seekTo);
+  };
+
+  const handleDuration = (dur: number) => {
+    setDuration(dur);
+  };
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return '00:00';
+    const date = new Date(seconds * 1000);
+    const hh = date.getUTCHours();
+    const mm = date.getUTCMinutes();
+    const ss = date.getUTCSeconds().toString().padStart(2, '0');
+    if (hh) {
+      return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
+    }
+    return `${mm}:${ss}`;
+  };
+
+  const toggleFullScreen = () => {
+    const playerContainer = containerRef.current;
+    if (!playerContainer) return;
+
+    if (!document.fullscreenElement) {
+      playerContainer.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+      setIsFullScreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullScreen(false);
+    }
+  };
+
+  // Handler for 15 seconds backward
+const handleBackward = () => {
+  if (playerRef.current) {
+    const currentTime = playerRef.current.getCurrentTime();
+    const newTime = Math.max(currentTime - 15, 0); // Prevent negative time
+    playerRef.current.seekTo(newTime, 'seconds');
+    setPlayed(newTime / duration);
+  }
+};
+
+// Handler for 15 seconds forward
+/*const handleForward = () => {
+  if (playerRef.current) {
+    const currentTime = playerRef.current.getCurrentTime();
+    const newTime = Math.min(currentTime + 15, duration); // Prevent exceeding duration
+    playerRef.current.seekTo(newTime, 'seconds');
+    setPlayed(newTime / duration);
+  }
+};*/
+
+
+  // Handler to disable context menu
+  const disableContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
   };
 
   return (
-    <div className="relative flex flex-row w-screen h-screen bg-black text-white">
+    <div className="relative flex flex-row w-screen h-screen text-white">
       {/* Sidebar for Notes */}
       <Notes />
 
@@ -243,24 +351,128 @@ const CourseClientComponent: React.FC = () => {
             initial="initial"
             animate="animate"
             exit="exit"
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="relative w-full h-full flex items-center justify-center"
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative w-full h-full flex flex-col items-center justify-center"
           >
-            <div className="w-full h-full flex flex-col text-3xl text-center font-custom1 items-center justify-center relative">
-              <div className="h-fit w-fit bg-black items-center justify-center border border-secondary">
+            <div className={`relative flex flex-col justify-center w-screen h-screen text-white ${isNotesOpen ? 'items-start pl-28' : 'items-center'}`}
+            >
+              {/* Container with Context Menu Disabled and Group for Hover */}
+              <div
+                className="h-fit w-fit bg-black items-center justify-center border border-secondary relative group"
+                onContextMenu={disableContextMenu} // Disable context menu here
+              >
+                {/* ReactPlayer with Custom Controls */}
                 <ReactPlayer
+                  ref={playerRef}
                   url={currentVideo.videoUrl}
-                  playing
-                  controls
+                  playing={playing}
+                  controls={false} // Disable default controls
                   height="30vw"
                   width="53vw"
                   onEnded={handleVideoEnd}
-                />
-              </div>
-              {/* Display Chapter Title */}
-              
+                  muted={muted}
+                  onProgress={handleProgress}
+                  onDuration={handleDuration}
+                  onDoubleClick={toggleFullScreen}
+                  onClick={togglePlayPause}
+                  onScroll={handleVolumeChange}
+                  />
+
+                {/* Custom Controls Overlay */}
+                <div
+                  className="
+                    absolute
+                    bottom-0
+                    left-0
+                    right-0
+                    flex
+                    flex-col
+                    items-center
+                    justify-center
+                    px-4
+                    opacity-0
+                    group-hover:opacity-100
+                    transition-opacity
+                    duration-500
+                    bg-gradient-to-t
+                    from-black
+                    z-10
+                  "
+                >
+                  {/* Progress Bar */}
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step="0.001"
+                    value={played}
+                    onChange={handleSeekChange}
+                    className="w-full h-10 bg-white"
+                    aria-label="Progress Bar"
+                  />
+                  <div className="w-full flex justify-between text-sm mb-2">
+                    <span>{formatTime(played * duration)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
+
+                  {/* Control Buttons */}
+                  <div className="flex items-center mb-2 space-x-10">
+                    {/* Backward 15 Seconds Button */}
+                      <button
+                        onClick={handleBackward}
+                        className="flex items-center text-lg justify-center px-4 text-zinc-400 hover:text-zinc-200 transition"
+                        aria-label="Rewind 15 seconds"
+                      >
+                        ← 15s
+                      </button>
+
+                    {/* Play/Pause Button */}
+                    <button
+                      onClick={togglePlayPause}
+                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      aria-label={playing ? "Pause" : "Play"}
+                    >
+                      
+                      <span className="ml-2">{playing ? 'Pause' : 'Play'}</span>
+                    </button>
+
+                    {/* Mute/Unmute Button */}
+                    <button
+                      onClick={toggleMute}
+                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      aria-label={muted ? "Unmute" : "Mute"}
+                    >
+                      <span className="ml-2">{muted || volume === 0 ? 'Unmute' : 'Mute'}</span>
+                    </button>
+
+                    {/* Volume Slider 
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step="0.01"
+                      value={muted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      className="w-32"
+                      aria-label="Volume Control"
+                    />*/}
+
+                    {/* Fullscreen Toggle */}
+                    <button
+                      onClick={toggleFullScreen}
+                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      aria-label={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                    >
+                    
+                      <span className="ml-2">{isFullScreen ? 'Exit Full Screen' : 'Full Screen'}</span>
+                    </button>
+                    
+                  </div>
+                  </div> 
                 
-              
+              </div> 
+
+              {/* Display Chapter Title */}
               <motion.h3
                 className="pl-24 absolute top-6 left-4 text-white text-left"
                 initial={{ opacity: 0, y: -20 }}
@@ -268,10 +480,8 @@ const CourseClientComponent: React.FC = () => {
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
               >
                 <p className='font-custom2 text-sm text-zinc-100'>{foundUnit.chapter.title}</p>
-                <p>{currentVideo.title}</p>
-                
+                <p className='font-custom1 text-2xl'>{currentVideo.title}</p>
               </motion.h3>
-              
             </div>
           </motion.div>
         ) : (

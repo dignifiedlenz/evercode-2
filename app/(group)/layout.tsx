@@ -46,7 +46,7 @@ const GroupLayout = async ({
       </div>
 
       {/* User Menu */}
-      <div className="fixed z-50 top-5 right-5">
+      <div className="fixed z-50 top-5 right-5 focus:outline-none">
         <UserMenu />
       </div>
 

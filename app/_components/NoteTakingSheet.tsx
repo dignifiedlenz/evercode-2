@@ -9,17 +9,11 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "react-hot-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Same NoteContent type as in the parent or a shared file
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export interface NoteContent {
-  type: string;
-  content?: Array<NoteContent>;
-  [key: string]: any;
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
+// ✅ Import the shared NoteContent type instead
+import { NoteContent } from "@/types/note";
 
 interface NoteTakingSheetProps {
-  note: NoteContent | null;              // Current note from parent
+  note: NoteContent | null; // use the shared type
   setNote: React.Dispatch<React.SetStateAction<NoteContent | null>>;
 }
 
@@ -27,8 +21,6 @@ export default function NoteTakingSheet({ note, setNote }: NoteTakingSheetProps)
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    // If we always want to fetch on mount, do so:
-    // (Otherwise, move this logic to the parent or handle it only once.)
     const fetchNote = async () => {
       setIsLoading(true);
       try {
@@ -68,21 +60,18 @@ export default function NoteTakingSheet({ note, setNote }: NoteTakingSheetProps)
       <div className="p-4 h-full flex flex-col">
         <h2 className="text-3xl text-secondary font-custom1 mb-4">Notes</h2>
         <ScrollArea className="h-full">
-        <div className="flex-grow overflow-y-auto p-4">
-          {isLoading ? (
-            <p>Fetching your notes...</p>
-          ) : (
-            
-            <NoteEditor
-              initialContent={note}
-              onLocalChange={(updatedContent) => {
-                // Store updated content in parent's state
-                setNote(updatedContent);
-              }}
-            />
-            
-          )}
-        </div>
+          <div className="flex-grow overflow-y-auto p-4">
+            {isLoading ? (
+              <p>Fetching your notes...</p>
+            ) : (
+              <NoteEditor
+                initialContent={note}
+                onLocalChange={(updatedContent) => {
+                  setNote(updatedContent);
+                }}
+              />
+            )}
+          </div>
         </ScrollArea>
       </div>
     </div>
