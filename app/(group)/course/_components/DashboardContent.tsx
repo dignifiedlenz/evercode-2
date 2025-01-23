@@ -3,9 +3,11 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Progress } from "@/components/ui/progress"; // Ensure this path is correct
+import { ParallaxProvider } from '@/components/ui/ParrallaxLayout';
+import ParallaxItem from '@/components/ui/ParallaxItem';
+import Link from 'next/link';
 
 interface DashboardContentProps {
   nextUnitTitle: string;
@@ -22,7 +24,7 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1, // Delay between each child animation
+      staggerChildren: 0.3, // Delay between each child animation
     },
   },
 };
@@ -47,6 +49,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
   progressPercentage,
 }) => {
   return (
+    <ParallaxProvider>
     <motion.div
       className="w-full md:w-3/4 lg:w-1/2 h-fit px-10"
       variants={containerVariants}
@@ -55,7 +58,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
     >
       {/* Welcome Back Message */}
       <motion.h1
-        className="text-6xl font-custom1 mb-4"
+        className="text-4xl md:text-6xl font-custom1 mb-4"
         variants={itemVariants}
       >
         Welcome Back!
@@ -63,21 +66,22 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
 
       {/* Next Unit Introduction */}
       <motion.p
-        className="mt-10 font-custom2"
+        className="text-sm md:text-xl mt-10 font-custom2"
         variants={itemVariants}
       >
         Your next unit is waiting for you:
       </motion.p>
-
+      
       {/* Next Unit Display with Chapter Name */}
       <motion.div className="mb-10" variants={itemVariants}>
         {nextUnitChapterTitle && (
-          <p className="text-sm text-gray-300">{nextUnitChapterTitle}</p>
+          <p className="text-sm md:text-lg text-gray-300">{nextUnitChapterTitle}</p>
         )}
-        <p className="text-3xl font-custom1">
+        <p className="text-xl md:text-3xl font-custom1">
           <strong>{nextUnitTitle}</strong>
         </p>
       </motion.div>
+
 
       {/* Resume Course Button */}
       {!allUnitsCompleted && (
@@ -90,8 +94,9 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
             Resume Course
           </Link>
         </motion.div>
-      )}
+      )} 
 
+    <ParallaxItem>
       {/* All Units Completed Message */}
       {allUnitsCompleted && (
         <motion.p
@@ -101,7 +106,9 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
           🎉 Congratulations! You have completed all units in the course.
         </motion.p>
       )}
+    </ParallaxItem>
 
+    <ParallaxItem speed={0.3}>
       {/* Progress Section */}
       <motion.div
         className="py-20 w-3/4 max-w-lg"
@@ -111,9 +118,10 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
         <Progress value={progressPercentage} className="mt-3 h-2 [&>div]:bg-secondary-foreground bg-white" />
         <p className="text-sm mt-2">{progressPercentage.toFixed(0)}% Complete</p>
       </motion.div>
-
+      </ParallaxItem>
      
     </motion.div>
+    </ParallaxProvider>
   );
 };
 

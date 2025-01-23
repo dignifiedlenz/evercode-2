@@ -28,7 +28,7 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 items-center py-4 text-2xl font-medium transition-all font-custom1 group",
+        "flex flex-1 items-center py-4 text-lg md:text-2xl font-medium transition-all font-custom1 group",
         className
       )}
       {...props}
@@ -38,7 +38,7 @@ const AccordionTrigger = React.forwardRef<
         height={80}
         src="/EvermodeArrow.svg"
         alt="Toggle"
-        className="h-8 w-8 shrink-0 transition-transform duration-200 mr-3 group-data-[state=open]:rotate-90"
+        className="h-2 w-2  md:h-8 md:w-8 shrink-0 transition-transform duration-200 mr-3 group-data-[state=open]:rotate-90"
       />
       {children}
     </AccordionPrimitive.Trigger>
@@ -58,7 +58,7 @@ const AccordionContent = React.forwardRef<
     )}
     {...props}
   >
-    <div className="pb-4 pt-0">{children}</div>
+    <div className="text-xs md:text-base pb-4 pt-0">{children}</div>
   </AccordionPrimitive.Content>
 ))
 AccordionContent.displayName = "AccordionContent"

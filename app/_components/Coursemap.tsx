@@ -65,7 +65,7 @@ export function CourseMap() {
                       {isClickable ? (
                         <Link
                           href={`/course?session=${unit.id}`}
-                          className={`flex items-start justify-between w-full text-lg tracking-wide hover:text-secondary-foreground hover:pl-5 transition-all duration-300 ${
+                          className={`flex items-start justify-between w-full text-sm md:text-lg tracking-wide hover:text-secondary-foreground hover:pl-5 transition-all duration-300 ${
                             isCompleted
                               ? "text-white"
                               : "text-zinc-200 font-semibold"

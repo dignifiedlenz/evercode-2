@@ -358,7 +358,7 @@ const handleBackward = () => {
             >
               {/* Container with Context Menu Disabled and Group for Hover */}
               <div
-                className="h-fit w-fit bg-black items-center justify-center border border-secondary relative group"
+                className="md:h-fit md:w-[65vw] bg-black items-center justify-center border border-secondary relative group"
                 onContextMenu={disableContextMenu} // Disable context menu here
               >
                 {/* ReactPlayer with Custom Controls */}
@@ -367,8 +367,8 @@ const handleBackward = () => {
                   url={currentVideo.videoUrl}
                   playing={playing}
                   controls={false} // Disable default controls
-                  height="30vw"
-                  width="53vw"
+                  height="100%"
+                  width="100%"
                   onEnded={handleVideoEnd}
                   muted={muted}
                   onProgress={handleProgress}
@@ -397,6 +397,7 @@ const handleBackward = () => {
                     bg-gradient-to-t
                     from-black
                     z-10
+                    text-xs
                   "
                 >
                   {/* Progress Bar */}
@@ -420,7 +421,7 @@ const handleBackward = () => {
                     {/* Backward 15 Seconds Button */}
                       <button
                         onClick={handleBackward}
-                        className="flex items-center text-lg justify-center px-4 text-zinc-400 hover:text-zinc-200 transition"
+                        className="flex items-center md:text-lg justify-center px-4 text-zinc-400 hover:text-zinc-200 transition"
                         aria-label="Rewind 15 seconds"
                       >
                         ← 15s
@@ -429,7 +430,7 @@ const handleBackward = () => {
                     {/* Play/Pause Button */}
                     <button
                       onClick={togglePlayPause}
-                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      className="flex items-center md:text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
                       aria-label={playing ? "Pause" : "Play"}
                     >
                       
@@ -439,7 +440,7 @@ const handleBackward = () => {
                     {/* Mute/Unmute Button */}
                     <button
                       onClick={toggleMute}
-                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      className="flex items-center md:text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
                       aria-label={muted ? "Unmute" : "Mute"}
                     >
                       <span className="ml-2">{muted || volume === 0 ? 'Unmute' : 'Mute'}</span>
@@ -460,7 +461,7 @@ const handleBackward = () => {
                     {/* Fullscreen Toggle */}
                     <button
                       onClick={toggleFullScreen}
-                      className="flex items-center text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
+                      className="flex items-center md:text-lg justify-center px-4 text-zinc-400  hover:text-zinc-200 transition"
                       aria-label={isFullScreen ? "Exit Full Screen" : "Full Screen"}
                     >
                     
@@ -479,8 +480,8 @@ const handleBackward = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
               >
-                <p className='font-custom2 text-sm text-zinc-100'>{foundUnit.chapter.title}</p>
-                <p className='font-custom1 text-2xl'>{currentVideo.title}</p>
+                <p className='font-custom2 w-48 md:w-full text-xs md:text-sm text-zinc-100'>{foundUnit.chapter.title}</p>
+                <p className='font-custom1 w-48 md:w-full text-sm md:text-2xl'>{currentVideo.title}</p>
               </motion.h3>
             </div>
           </motion.div>
@@ -495,10 +496,10 @@ const handleBackward = () => {
             transition={{ duration: 0.7, ease: "easeInOut" }}
             className="absolute w-full h-full flex flex-col items-center justify-center"
           >
-            <div className="w-full flex flex-col items-center max-w-2xl py-20 px-20 relative border bg-black bg-opacity-30 rounded-lg border-secondary">
+            <div className="w-fit flex flex-col items-center max-w-2xl mx-5 md:mx-0 py-5 md:py-20 px-5 md:px-20 relative border bg-black bg-opacity-30 rounded-lg border-secondary">
               {/* Questions Section Title Overlay */}
-              <h3 className='top-2 flex flex-col items-center text-center font-custom2 text-sm bg-opacity-75 text-white px-3 py-1 rounded'>{foundUnit.chapter.title}</h3>
-              <h2 className=" top-6 flex flex-col items-center text-center font-custom1 text-3xl bg-opacity-75 text-white px-3 py-1 rounded">
+              <h3 className='hidden top-2 md:flex flex-col items-center text-center font-custom2 text-xs md:text-lg bg-opacity-75 text-white px-3 py-1 rounded'>{foundUnit.chapter.title}</h3>
+              <h2 className="w-full top-6 flex flex-col items-center text-center font-custom1 text-basde md:text-3xl bg-opacity-75 text-white px-3 py-1 rounded">
                 {currentVideo.title}
                 <div className="mt-6 h-[1px] w-40 bg-secondary"></div>
               </h2>
@@ -511,17 +512,17 @@ const handleBackward = () => {
                   animate="animate"
                   exit="exit"
                   transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="space-y-6 mt-10 text-center border-1-secondary z-30"
+                  className="space-y-6 mt-4 md:mt-10 text-center border-1-secondary z-30"
                 >
-                  <h3 className="text-xl opacity-70 font-custom1 z-20">
+                  <h3 className="text-base md:text-xl opacity-70 font-custom1 z-20">
                     Question {currentQuestionIndex + 1} of {currentVideo.questions.length}
                   </h3>
-                  <p className="text-2xl">{currentQuestion.question}</p>
+                  <p className="text-base md:text-2xl">{currentQuestion.question}</p>
                   <div className="space-y-4">
                     {currentQuestion.options.map((option: string, idx: number) => (
                       <button
                         key={idx}
-                        className={`w-full px-4 py-2 bg-zinc-950 rounded hover:bg-zinc-700 hover:border-1-secondary transition-colors text-center text-white text-lg ${
+                        className={`w-full px-4 py-2 text-sm bg-zinc-950 rounded hover:bg-zinc-700 hover:border-1-secondary transition-colors text-center text-white md:text-lg ${
                           isLocked ? "cursor-not-allowed opacity-50" : ""
                         }`}
                         onClick={() => handleAnswerSelection(option)}
@@ -534,14 +535,14 @@ const handleBackward = () => {
                   </div>
                   {/* Error Message */}
                   {isLocked && (
-                    <div className="text-red-500 mt-4">
+                    <div className="text-red-500 text-xs md: text-sm mt-4">
                       Whoops! That was not correct. Wait {cooldownTime} seconds to try again!
                     </div>
                   )}
                   {/* Back to Video Button */}
                   {hasWrongAnswer && (
                     <button
-                      className="mt-6 px-4 py-2 bg-secondary rounded hover:bg-secondary-foreground transition-colors text-black text-lg"
+                      className="mt-6 px-4 py-2 bg-secondary rounded hover:bg-secondary-foreground transition-colors text-black text-sm md:text-lg"
                       onClick={() => setIsQuestionSection(false)}
                     >
                       ← Back to Video

@@ -12,7 +12,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
   return (
     <div className="fixed left-4 top-1/2 transform -translate-y-1/2 h-[75vh] w-2 bg-gray-300 rounded">
       <div
-        className="bg-green-500 w-full rounded transition-all duration-500"
+        className="w-full rounded transition-all duration-500"
         style={{ height: `${progress}%` }}
       ></div>
     </div>

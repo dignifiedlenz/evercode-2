@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import courseData from "../_components/(semester1)/courseData";
 import DashboardContent from "./course/_components/DashboardContent";
 import { Unit } from "@/types/course";
+import  { ParallaxProvider } from "@/components/ui/ParrallaxLayout";
+import ParallaxItem from "@/components/ui/ParallaxItem";
 
 // Define the shape of completedUnits
 interface CompletedUnits {
@@ -142,10 +144,11 @@ export default async function DashboardPage() {
   const allUnitsCompleted = progressPercentage === 100;
 
   return (
-    <main className="pl-48 flex flex-col justify-center space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
+    <ParallaxProvider>
+    <main className="pl-5 md:pl-48 flex flex-col justify-center space-y-20 min-h-screen min-w-full bg-cover bg-opacity-35 text-white">
+      
       <div
         className="
-          pl-56
           w-[120vw]
           h-[120vh]
           absolute
@@ -164,8 +167,11 @@ export default async function DashboardPage() {
             : `url('${courseData[courseData.length - 1].chapters[courseData[courseData.length - 1].chapters.length - 1].backgroundImage}')`,
         }}
       />
+      
       {/* 2. Use the DashboardContent client component */}
+      <ParallaxItem speed={0.5} className="z-500">
       <DashboardContent
+        
         nextUnitTitle={nextUnitTitle}
         nextUnitChapterTitle={nextUnitChapterTitle}
         resumeCourseLink={resumeCourseLink}
@@ -174,6 +180,7 @@ export default async function DashboardPage() {
         lastCompletedUnitDisplay={lastCompletedUnitDisplay}
         lastCompletedChapterDisplay={lastCompletedChapterDisplay}
       />
+      </ParallaxItem>
            {isAdmin && (
         <div className="text-right pr-8">
           <a
@@ -185,5 +192,6 @@ export default async function DashboardPage() {
         </div>
       )}
     </main>
+    </ParallaxProvider>
   );
 }

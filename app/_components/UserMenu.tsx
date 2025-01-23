@@ -39,7 +39,7 @@ const UserMenu: React.FC = () => {
             height={100}
               src="/thomas-aquinas.jpeg" // Replace with your avatar image path or URL
               alt="User Avatar"
-              className="w-full h-full rounded-full object-cover hidden md:block"
+              className="w-full h-full rounded-full object-cover"
             />
             {/* Default User Icon for smaller screens or if avatar not available */}
             <User className="w-6 h-6 text-gray-600 md:hidden" />

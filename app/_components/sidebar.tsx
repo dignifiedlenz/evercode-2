@@ -36,7 +36,7 @@ export default function Sidebar({  }: SidebarProps) {
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent
           side="left"
-          className="bg-black min-w-[35vw] h-full"
+          className="bg-black min-w-screen h-full"
         >
           <SheetHeader>
             <SheetTitle className="text-3xl font-custom1 text-secondary">COURSE MAP</SheetTitle>
