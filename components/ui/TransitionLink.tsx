@@ -1,4 +1,6 @@
 "use client";
+
+
 import Link, { LinkProps } from "next/link";
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -6,6 +8,7 @@ import { useRouter } from "next/navigation";
 interface TransitionLinkProps extends LinkProps {
   children: React.ReactNode;
   href: string;
+  className?: string;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -26,7 +29,7 @@ export const TransitionLink: React.FC<TransitionLinkProps> = ({
     const body = document.querySelector("body");
 
     // 1. Add the .page-transition class
-    body?.classList.add("page-transition");
+    body?.classList.add("page-transition-x");
 
     // 2. Wait for the fade/blur/slide to finish
     await sleep(500);
@@ -35,8 +38,8 @@ export const TransitionLink: React.FC<TransitionLinkProps> = ({
     router.push(href);
 
     // 4. (Optionally) Remove the class after the new page loads:
-    await sleep(500);
-    body?.classList.remove("page-transition");
+    await sleep(1);
+    body?.classList.remove("page-transition-x");
   };
 
   return (

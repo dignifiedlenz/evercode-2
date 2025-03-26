@@ -35,17 +35,15 @@ export default function SignInPage() {
   return (
 
     
-    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-custom2">
+    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-morion">
       <div
         className="
-          pl-56
           w-[120vw]
           h-[120vh]
           absolute
           inset-0
           bg-cover
           bg-center
-          opacity-35
           pointer-events-none
           transition-all
           duration-100
@@ -55,7 +53,7 @@ export default function SignInPage() {
           backgroundImage: `url('/516038ldsdl.jpg')`,
         }}
       />
-      
+      <div className="absolute inset-0 bg-black/50 -z-10"></div>
       <div>
         <AuthLogo/>
       </div>

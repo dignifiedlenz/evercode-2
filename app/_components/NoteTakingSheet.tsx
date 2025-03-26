@@ -53,7 +53,7 @@ export default function NoteTakingSheet({ note, setNote }: NoteTakingSheetProps)
   }, [setNote]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full text-white">
       <DialogTitle>
         <VisuallyHidden>Notes Sheet</VisuallyHidden>
       </DialogTitle>

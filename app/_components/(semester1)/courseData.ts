@@ -6,11 +6,32 @@ export const courseData: Semester[] = [
   {
     id: "semester-1",
     title: "Semester 1: Introduction to Web Development",
+    description: "Building the fundamentals of web development",
+    backgroundImage: "/sm/306383rg.jpeg",
+    instructors: [
+      {
+        id: "instructor-1-1",
+        name: "Fr. Ambrose Criste",
+        description: "Fr. Ambrose Criste is a priest of the Diocese of Brooklyn and New York. He is a member of the Dominican Order and a member of the Dominican Friars of the Immaculate Conception.",
+        profileImage: "/ambrose.png",
+        role: "Lead Instructor",
+        introductionVideo: "https://evermodecontent.s3.us-east-1.amazonaws.com/Fr.+Ambrose+Introduction.mp4"
+      },
+      {
+        id: "instructor-1-2",
+        name: "Fr. Hugh Barbour",
+        description: "Fr. Hugh Barbour is a priest of the Diocese of Brooklyn and New York. He is a member of the Dominican Order and a member of the Dominican Friars of the Immaculate Conception.",
+        profileImage: "/hugh.png",
+        role: "UX Specialist",
+        introductionVideo: "https://evermodecontent.s3.us-east-1.amazonaws.com/Father+Hugh+Introduction.mp4"
+      }
+    ],
     chapters: [
       {
         id: "chapter-1",
         title: "Chapter 1: The Creed - Jesus and the Incarnation",
-        backgroundImage: "/306383rg.jpg",
+        description: "Explore the fundamental beliefs about Jesus Christ and the doctrine of Incarnation",
+        backgroundImage: "/sm/500063ldsdl.jpeg",
         units: [
           {
             id: "unit-1",
@@ -22,7 +43,7 @@ export const courseData: Semester[] = [
               questions: [
                 {
                   id: "q1",
-                  question: "When we say we believe “in Jesus Christ, His only Son, Our Lord” we are professing which dogmas of the Faith?",
+                  question: "When we say we believe 'in Jesus Christ, His only Son, Our Lord' we are professing which dogmas of the Faith?",
                   options: [
                     "The Incarnation",
                     "The Holy Trinity",
@@ -147,10 +168,10 @@ export const courseData: Semester[] = [
                   options: [
                     "Because the Holy Spirit is the most powerful person of the Holy Trinity",
                     "Because we attribute the creation of all material things to the Holy Spirit",
-                    "Because the Incarnation is God’s greatest manifestation of love, and the Holy Spirit is the expression of love in the Holy Trinity",
+                    "Because the Incarnation is God's greatest manifestation of love, and the Holy Spirit is the expression of love in the Holy Trinity",
                     "All of the above",
                   ],
-                  correctAnswer: "Because the Incarnation is God’s greatest manifestation of love, and the Holy Spirit is the expression of love in the Holy Trinity",
+                  correctAnswer: "Because the Incarnation is God's greatest manifestation of love, and the Holy Spirit is the expression of love in the Holy Trinity",
                 },
                 {
                   id: "q13",
@@ -192,7 +213,7 @@ export const courseData: Semester[] = [
               questions: [
                 {
                   id: "q16",
-                  question: "By the term “virginal motherhood” we mean that Mary was a virgin…",
+                  question: "By the term 'virginal motherhood' we mean that Mary was a virgin...",
                   options: [
                     "Before the birth of Christ",
                     "During the birth of Christ",
@@ -206,9 +227,9 @@ export const courseData: Semester[] = [
                   question: "Which of the following is not a reason for the virginal motherhood of Mary?",
                   options: [
                     "As the New Eve, she needed to be preserved from original sin.",
-                    "It manifests God’s absolute initiative in the Incarnation.",
+                    "It manifests God's absolute initiative in the Incarnation.",
                     "Because Mary is the head of the new redeemed humanity.",
-                    "Through his virginal conception, Jesus, the New Adam, gives us a new birth as God’s children.",
+                    "Through his virginal conception, Jesus, the New Adam, gives us a new birth as God's children.",
                   ],
                   correctAnswer: "Because Mary is the head of the new redeemed humanity.",
                 },
@@ -223,7 +244,7 @@ export const courseData: Semester[] = [
                 },
                 {
                   id: "q19",
-                  question: "The hypostatic union is the term used to describe the union of Christ’s…",
+                  question: "The hypostatic union is the term used to describe the union of Christ's...",
                   options: [
                     "Human intellect and divine will",
                     "Human will and divine will",
@@ -234,7 +255,7 @@ export const courseData: Semester[] = [
                 },
                 {
                   id: "q20",
-                  question: "We call Mary “mediatrix” because of her truly unique cooperation and participation in Christ’s redemptive work.",
+                  question: "We call Mary 'mediatrix' because of her truly unique cooperation and participation in Christ's redemptive work.",
                   options: [
                     "True",
                     "False",
@@ -248,8 +269,9 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-2",
-        title: "Chapter 2: Advanced HTML",
-        backgroundImage: "/301807rg.jpg",
+        title: "Chapter 2: Natural Philosophy",
+        description: "Master advanced HTML concepts including forms, semantic elements, and accessibility",
+        backgroundImage: "/sm/500063ldsdl.jpeg",
         units: [
           {
             id: "unit-5",
@@ -453,8 +475,9 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-3",
-        title: "Chapter 3: JavaScript Basics",
-        backgroundImage: "/images/chapter3-bg.jpg",
+        title: "Chapter 3:  The Creed - continued",
+        description: "Learn the fundamentals of JavaScript programming",
+        backgroundImage: "/310282rg.jpg",
         units: [
           {
             id: "unit-8",
@@ -787,8 +810,9 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-4",
-        title: "Chapter 4: CSS Advanced Techniques",
-        backgroundImage: "/images/chapter4-bg.jpg",
+        title: "Chapter 4: Philosophy of the Soul",
+        description: "Master advanced CSS layouts and styling techniques",
+        backgroundImage: "/creationofadam.jpg",
         units: [
           {
             id: "unit-13",
@@ -992,8 +1016,9 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-5",
-        title: "Chapter 5: Advanced JavaScript",
-        backgroundImage: "/images/chapter5-bg.jpg",
+        title: "Chapter 5: The Creed - continued",
+        description: "this is the description",
+        backgroundImage: "/801032ht.jpg",
         units: [
           {
             id: "unit-16",
@@ -1264,7 +1289,8 @@ export const courseData: Semester[] = [
       {
         id: "chapter-6",
         title: "Chapter 6: React Basics",
-        backgroundImage: "/images/chapter6-bg.jpg",
+        description: "this is the description",
+        backgroundImage: "/304110rgsdl.jpg",
         units: [
           {
             id: "unit-20",
@@ -1335,9 +1361,179 @@ export const courseData: Semester[] = [
         ],
       },
     ]
+  },
+  {
+    id: "semester-2",
+    title: "Semester 2: Advanced Frontend Development",
+    description: "Master modern frontend frameworks and tools",
+    backgroundImage: "/sm/516038ldsdl.jpeg",
+    instructors: [
+      {
+        id: "instructor-2-1",
+        name: "Dr. Emily Thompson",
+        description: "Dr. Thompson is a React expert who has contributed to major open-source projects. She specializes in state management, custom hooks, and advanced React patterns.",
+        profileImage: "/instructors/emily-thompson.jpg",
+        role: "React Specialist",
+        introductionVideo: "https://www.youtube.com/watch?v=example3"
+      },
+      {
+        id: "instructor-2-2",
+        name: "Prof. James Wilson",
+        description: "Professor Wilson is a full-stack developer with expertise in modern JavaScript frameworks. He has led development teams at several startups and teaches advanced frontend concepts.",
+        profileImage: "/instructors/james-wilson.jpg",
+        role: "Frontend Architect",
+        introductionVideo: "https://www.youtube.com/watch?v=example4"
+      }
+    ],
+    chapters: [
+      {
+        id: "chapter-7",
+        title: "Chapter 7: Advanced React Patterns",
+        description: "Learn advanced React patterns and best practices",
+        backgroundImage: "/sm/306383rg.jpeg",
+        units: [
+          {
+            id: "unit-21",
+            title: "Unit 21: Custom Hooks",
+            video: {
+              id: "video-21",
+              title: "Building Custom Hooks",
+              videoUrl: "https://example.com/videos/custom-hooks.mp4",
+              questions: [
+                {
+                  id: "q101",
+                  question: "What is the main purpose of custom hooks?",
+                  options: [
+                    "To share logic between components",
+                    "To style components",
+                    "To create new components",
+                    "To manage routing"
+                  ],
+                  correctAnswer: "To share logic between components"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        id: "chapter-8",
+        title: "Chapter 8: State Management",
+        description: "Explore different state management solutions",
+        backgroundImage: "/sm/516038ldsdl.jpeg",
+        units: [
+          {
+            id: "unit-22",
+            title: "Unit 22: Redux Fundamentals",
+            video: {
+              id: "video-22",
+              title: "Introduction to Redux",
+              videoUrl: "https://example.com/videos/redux-intro.mp4",
+              questions: [
+                {
+                  id: "q102",
+                  question: "What is Redux?",
+                  options: [
+                    "A state management library",
+                    "A styling framework",
+                    "A testing tool",
+                    "A build tool"
+                  ],
+                  correctAnswer: "A state management library"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "semester-3",
+    title: "Semester 3: Backend Development",
+    description: "Build robust server-side applications",
+    backgroundImage: "/sm/500063ldsdl.jpeg",
+    instructors: [
+      {
+        id: "instructor-3-1",
+        name: "Dr. David Kumar",
+        description: "Dr. Kumar is a Node.js expert with extensive experience in building scalable backend systems. He has worked on enterprise-level applications and teaches server-side development.",
+        profileImage: "/instructors/david-kumar.jpg",
+        role: "Backend Specialist",
+        introductionVideo: "https://www.youtube.com/watch?v=example5"
+      },
+      {
+        id: "instructor-3-2",
+        name: "Prof. Lisa Martinez",
+        description: "Professor Martinez specializes in database design and optimization. She has designed database schemas for high-traffic applications and teaches best practices in data modeling.",
+        profileImage: "/instructors/lisa-martinez.jpg",
+        role: "Database Expert",
+        introductionVideo: "https://www.youtube.com/watch?v=example6"
+      }
+    ],
+    chapters: [
+      {
+        id: "chapter-9",
+        title: "Chapter 9: Node.js Fundamentals",
+        description: "Learn the basics of server-side JavaScript",
+        backgroundImage: "/sm/306383rg.jpeg",
+        units: [
+          {
+            id: "unit-23",
+            title: "Unit 23: Async Programming",
+            video: {
+              id: "video-23",
+              title: "Asynchronous JavaScript in Node.js",
+              videoUrl: "https://example.com/videos/nodejs-async.mp4",
+              questions: [
+                {
+                  id: "q103",
+                  question: "What is the Event Loop?",
+                  options: [
+                    "Node.js's mechanism for handling async operations",
+                    "A type of data structure",
+                    "A routing system",
+                    "A testing framework"
+                  ],
+                  correctAnswer: "Node.js's mechanism for handling async operations"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        id: "chapter-10",
+        title: "Chapter 10: Database Design",
+        description: "Master database modeling and querying",
+        backgroundImage: "/sm/516038ldsdl.jpeg",
+        units: [
+          {
+            id: "unit-24",
+            title: "Unit 24: SQL Fundamentals",
+            video: {
+              id: "video-24",
+              title: "Introduction to SQL",
+              videoUrl: "https://example.com/videos/sql-basics.mp4",
+              questions: [
+                {
+                  id: "q104",
+                  question: "What is a primary key?",
+                  options: [
+                    "A unique identifier for a record",
+                    "A foreign key reference",
+                    "A table join",
+                    "A database backup"
+                  ],
+                  correctAnswer: "A unique identifier for a record"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
   }
 ]
-
-
 
 export default courseData;

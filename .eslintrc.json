@@ -1,0 +1,14 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "@typescript-eslint/no-unused-vars": ["error", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_|hasMounted|wheelBuffer|activeVideoPlaying|isOnline|handleWheel|setVolume|played|handleSeekChange|formatTime|togglePlayPause|toggleMute|handleBackward|isFullScreen|toggleFullScreen|hasWrongAnswer|loadedProgress|volume|setMuted|currentQuestion|setPlaying|completedUnits|isLoading|account|profile|email|credentials",
+      "caughtErrorsIgnorePattern": "^_"
+    }],
+    "@next/next/no-img-element": "warn",
+    "react-hooks/exhaustive-deps": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "prefer-const": "warn"
+  }
+} 

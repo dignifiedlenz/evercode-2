@@ -1,4 +1,5 @@
 // src/context/ProgressContext.tsx
+"use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -26,9 +27,21 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children }) 
       try {
         const res = await fetch('/api/progress');
         if (res.ok) {
-          const data = await res.json();
-          setCompletedUnits(data.completedUnits);
-          console.log('Fetched initial progress:', data.completedUnits);
+          const textData = await res.text();
+          
+          // Skip processing if response is empty
+          if (!textData) {
+            console.log('Empty response from progress API');
+            return;
+          }
+          
+          try {
+            const data = JSON.parse(textData);
+            setCompletedUnits(data.completedUnits || {});
+            console.log('Fetched initial progress:', data.completedUnits);
+          } catch (parseError) {
+            console.error('Error parsing progress JSON:', parseError, 'Response:', textData);
+          }
         } else {
           console.error('Failed to fetch progress:', res.statusText);
         }
@@ -48,21 +61,36 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children }) 
       });
 
       if (res.ok) {
-        setCompletedUnits(prev => {
-          const chapterUnits = prev[chapterId] || [];
-          if (!chapterUnits.includes(unitId)) {
-            const updated = { ...prev, [chapterId]: [...chapterUnits, unitId] };
-            console.log(`Unit ${unitId} marked as completed in chapter ${chapterId}`);
-            return updated;
-          }
-          return prev;
-        });
+        const textData = await res.text();
+        
+        // Skip processing if response is empty
+        if (!textData) {
+          console.log('Empty response from progress update API');
+          return;
+        }
+        
+        try {
+          const data = JSON.parse(textData);
+          // Update local state to reflect the backend changes
+          setCompletedUnits(prev => {
+            const newState = { ...prev };
+            if (!newState[chapterId]) {
+              newState[chapterId] = [];
+            }
+            if (!newState[chapterId].includes(unitId)) {
+              newState[chapterId] = [...newState[chapterId], unitId];
+            }
+            return newState;
+          });
+          console.log('Updated progress:', data);
+        } catch (parseError) {
+          console.error('Error parsing progress update JSON:', parseError, 'Response:', textData);
+        }
       } else {
-        const errorData = await res.json();
-        console.error('Failed to mark unit as completed:', errorData.message);
+        console.error('Failed to update progress:', res.statusText);
       }
     } catch (error) {
-      console.error('Error marking unit as completed:', error);
+      console.error('Error updating progress:', error);
     }
   };
 

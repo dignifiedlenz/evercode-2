@@ -5,56 +5,167 @@ import { prisma } from "@/lib/prisma"; // Adjust the import path based on your p
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: Request) { // Renamed to _request to prevent unused parameter error
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-
+export async function GET(request: Request) {
   try {
-    const note = await prisma.note.findUnique({
-      where: { userId }, // Ensure 'userId' is unique in your Prisma schema
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { searchParams } = new URL(request.url);
+    const chapterId = searchParams.get("chapterId");
+    const unitId = searchParams.get("unitId");
+
+    const notes = await prisma.note.findMany({
+      where: {
+        userId,
+        ...(chapterId ? { chapterId } : {}),
+        ...(unitId ? { unitId } : {}),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    return NextResponse.json({
-      content: note ? JSON.parse(note.content) : null, // Adjust based on Prisma's JSON handling
+    // Ensure each note has valid content
+    const processedNotes = notes.map(note => {
+      try {
+        // Don't try to parse content again if it's already been parsed by Prisma
+        const parsedContent = typeof note.content === 'string' 
+          ? JSON.parse(note.content) 
+          : note.content;
+          
+        return {
+          ...note,
+          content: parsedContent,
+        };
+      } catch (error) {
+        console.error(`Error parsing note content for note ${note.id}:`, error);
+        // Return a default empty content structure if parsing fails
+        return {
+          ...note,
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Error loading note content"
+                  }
+                ]
+              }
+            ]
+          },
+        };
+      }
     });
+
+    return NextResponse.json({ notes: processedNotes });
   } catch (error) {
-    console.error("Error fetching note:", error);
-    return NextResponse.json({ error: "Failed to fetch note" }, { status: 500 });
+    console.error("Error fetching notes:", error);
+    return NextResponse.json({ 
+      error: "Failed to fetch notes",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  const body = await request.json();
-  const { content } = body;
-
-  // Validate that content is a valid JSON object
-  if (!content || typeof content !== "object") {
-    return NextResponse.json({ error: "Invalid content format" }, { status: 400 });
-  }
-
   try {
-    const note = await prisma.note.upsert({
-      where: { userId }, // Ensure 'userId' is unique in your Prisma schema
-      update: { content: JSON.stringify(content) },
-      create: { content: JSON.stringify(content), userId },
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.error("Failed to parse request body");
+      return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
+    }
+
+    const { content, chapterId, unitId, title, timestamp = 0 } = body;
+
+    // Only chapterId is required, unitId is optional
+    if (!content || !chapterId || !title) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Missing required fields" 
+      }, { status: 400 });
+    }
+
+    console.log("Processing note save request:", { 
+      userId, 
+      chapterId,
+      unitId: unitId || 'not specified',
+      titleLength: title.length 
     });
 
-    return NextResponse.json({ content: JSON.parse(note.content) }, { status: 200 });
+    // Ensure timestamp is a number
+    const numericTimestamp = Number(timestamp) || 0;
+    const contentString = JSON.stringify(content);
+
+    try {
+      // Try to find an existing note by userId and chapterId only
+      const existingNote = await prisma.note.findFirst({
+        where: {
+          userId,
+          chapterId,
+        },
+      });
+
+      if (existingNote) {
+        // Update existing note
+        await prisma.note.update({
+          where: {
+            id: existingNote.id,
+          },
+          data: {
+            content: contentString,
+            title,
+            unitId: unitId || existingNote.unitId, // Keep existing unitId if not provided
+            timestamp: numericTimestamp,
+          },
+        });
+        console.log("Updated existing note with ID:", existingNote.id);
+      } else {
+        // Create new note
+        const newNote = await prisma.note.create({
+          data: {
+            content: contentString,
+            title,
+            chapterId,
+            unitId: unitId || '', // Make unitId optional in new notes
+            timestamp: numericTimestamp,
+            userId,
+          },
+        });
+        console.log("Created new note with ID:", newNote.id);
+      }
+
+      return NextResponse.json({ success: true, message: "Note saved successfully" });
+    } catch (dbError) {
+      console.error("Database error saving note:", dbError);
+      return NextResponse.json({ 
+        success: false, 
+        message: "Database error saving note",
+        error: dbError instanceof Error ? dbError.message : "Unknown database error"
+      }, { status: 500 });
+    }
   } catch (error) {
     console.error("Error saving note:", error);
-    return NextResponse.json({ error: "Failed to save note" }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      message: "Server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }

@@ -14,18 +14,21 @@ enum Role {
 
 
 model User {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  email    String @unique
-  password String
-  firstName  String?
-  lastName   String?
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  lastLoginTime DateTime?
+  deviceType    String?
   lastCompletedSession     Int     @default(0)
-  notes  Note?
+  notes         Note[]
   completedChapters String[] @default([])
   completedUnits Json @default("{}")
   role                    Role     @default(learner)
   groupId                 String?   @db.ObjectId
   group                   Group?    @relation(fields: [groupId], references: [id])
+  progress        UserProgress?
   // Add any extra fields you want (e.g. name, createdAt, etc.)
 }
 
@@ -34,13 +37,87 @@ model Note {
   content   String   // JSON string representing Slate's Descendant[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String   @unique @db.ObjectId
+  userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
+  chapterId String
+  unitId    String
+  title     String   // Title of the note
+  timestamp Int?     // Video timestamp when the note was created
+
+  @@unique([userId, chapterId])
 }
 
 model Group {
   id    String @id @default(auto()) @map("_id") @db.ObjectId
   name  String @unique
   users User[]
+}
+
+// Progress tracking models
+model UserProgress {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String             @db.ObjectId
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoProgress     VideoProgress[]
+  questionProgress  QuestionProgress[]
+  unitProgress      UnitProgress[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([userId])
+}
+
+model VideoProgress {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  videoId     String
+  chapterId   String
+  unitId      String
+  currentTime Float
+  duration    Float
+  completed   Boolean      @default(false)
+  progressId  String       @db.ObjectId
+  progress    UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  lastUpdated DateTime     @default(now())
+
+  @@unique([progressId, videoId])
+  @@index([progressId])
+  @@index([videoId])
+  @@index([unitId])
+}
+
+model QuestionProgress {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  questionId  String
+  chapterId   String
+  unitId      String
+  answered    Boolean      @default(false)
+  correct     Boolean      @default(false)
+  progressId  String       @db.ObjectId
+  progress    UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  lastUpdated DateTime     @default(now())
+
+  @@unique([progressId, questionId])
+  @@index([progressId])
+  @@index([questionId])
+  @@index([unitId])
+}
+
+model UnitProgress {
+  id                 String       @id @default(auto()) @map("_id") @db.ObjectId
+  unitId             String
+  chapterId          String
+  videoCompleted     Boolean      @default(false)
+  questionsCompleted Boolean      @default(false)
+  completed          Boolean      @default(false)
+  progressId         String       @db.ObjectId
+  progress           UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  lastAccessed       DateTime     @default(now())
+  firstName          String?
+  lastName           String?
+
+  @@unique([progressId, unitId])
+  @@index([progressId])
+  @@index([unitId])
+  @@index([chapterId])
 }
 

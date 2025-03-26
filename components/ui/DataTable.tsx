@@ -1,267 +1,186 @@
-// src/components/ui/DataTable.tsx
+"use client"
 
-"use client";
-
-import * as React from "react";
-import {
-  ColumnDef,
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  SortingState,
-  ColumnFiltersState,
-  VisibilityState,
-  flexRender,
-  HeaderGroup,
-  Header,
-  Row,
-  Cell,
-  Column,
-} from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import React, { useState, useMemo } from "react"
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table"
+import { motion } from "framer-motion"
 
-import { Progress } from "@/components/ui/progress";
-
+// Enhanced user data interface
 interface UserData {
-  name: string;
-  email: string;
-  progress: number;
+  name: string
+  email: string
+  progress: number
 }
 
 interface DataTableProps {
-  data: UserData[];
+  data: UserData[]
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ data }) => {
-  // Define columns within the client component to avoid passing functions from server to client
-  const columns: ColumnDef<UserData>[] = React.useMemo(
-    () => [
-      {
-        accessorKey: "name",
-        header: "Name",
-        cell: ({ row }) => row.getValue("name"),
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-        cell: ({ row }) => row.getValue("email"),
-      },
-      {
-        accessorKey: "progress",
-        header: "Progress",
-        cell: ({ row }) => {
-          const progress = row.getValue<number>("progress");
-          return (
-            <div className="flex items-center space-x-2">
-              <Progress value={progress} className="w-32" />
-              <span>{progress}%</span>
-            </div>
-          );
-        },
-      },
-    ],
-    []
-  );
+export function DataTable({ data }: DataTableProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof UserData,
+    direction: 'ascending' | 'descending'
+  }>({
+    key: 'name',
+    direction: 'ascending'
+  })
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
-    {}
-  );
-
-  const table = useReactTable<UserData>({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-    },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true,
-  });
-
+  // Search and sort functionality
+  const filteredAndSortedData = useMemo(() => {
+    // First filter the data
+    const filteredData = data.filter(user => 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    
+    // Then sort the filtered data
+    return [...filteredData].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? -1 : 1
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? 1 : -1
+      }
+      return 0
+    })
+  }, [data, searchTerm, sortConfig])
+  
+  // Handle sorting
+  const requestSort = (key: keyof UserData) => {
+    let direction: 'ascending' | 'descending' = 'ascending'
+    
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending'
+    }
+    
+    setSortConfig({ key, direction })
+  }
+  
+  // Get sort indicator
+  const getSortDirectionIndicator = (key: keyof UserData) => {
+    if (sortConfig.key !== key) return null
+    return sortConfig.direction === 'ascending' ? '↑' : '↓'
+  }
+  
   return (
-    <div className="w-full h-full p-8 overflow-auto">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between pb-4">
-        {/* Search Input */}
-        <Input
-          placeholder="Search by name..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            table.getColumn("name")?.setFilterValue(e.target.value)
-          }
-          className="max-w-sm"
-        />
-
-        {/* Column Visibility Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {table.getAllLeafColumns().map((column: Column<UserData, unknown>) => {
-              // Skip if the column doesn't have an ID (unlikely, but just to be safe)
-              if (!column.id) return null;
-
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(checked: boolean) =>
-                    column.toggleVisibility(checked)
-                  }
-                >
-                  {column.id.charAt(0).toUpperCase() + column.id.slice(1)}
-                </DropdownMenuCheckboxItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Table */}
-      <Table className="min-w-full bg-black text-white rounded-lg">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup: HeaderGroup<UserData>) => (
-            <TableRow key={headerGroup.id} className="bg-zinc-800">
-              {headerGroup.headers.map((header: Header<UserData, unknown>) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder ? null : (
-                    <div
-                      className={
-                        header.column.getCanSort()
-                          ? "cursor-pointer select-none flex items-center gap-2"
-                          : ""
-                      }
-                      onClick={header.column.getToggleSortingHandler()}
-                      role={
-                        header.column.getCanSort() ? "button" : undefined
-                      }
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: <ArrowUpDown className="w-4 h-4" />,
-                        desc: <ChevronDown className="w-4 h-4" />,
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </div>
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table
-              .getRowModel()
-              .rows.map((row: Row<UserData>) => (
-                <TableRow key={row.id} className="transition-colors duration-200">
-                  {row.getVisibleCells().map((cell: Cell<UserData, unknown>) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-          ) : (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="text-center py-4 text-gray-400"
-              >
-                No users found.
-              </TableCell>
-            </TableRow>
+    <div className="bg-black/70 p-6 rounded-xl border border-gray-800 shadow-xl">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-white">Student Progress</h2>
+        
+        <div className="relative w-full md:w-64">
+          <input
+            type="text"
+            placeholder="Search students..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-black/50 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
           )}
-        </TableBody>
-      </Table>
-
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between py-4">
-        {/* Rows Per Page */}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-400">Rows per page:</span>
-          <select
-            value={table.getState().pagination.pageSize}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              table.setPageSize(Number(e.target.value))
-            }
-            className="border border-gray-600 rounded p-1 bg-black text-white"
-          >
-            {[10, 20, 30, 40, 50].map((pageSize) => (
-              <option key={pageSize} value={pageSize}>
-                {pageSize}
-              </option>
-            ))}
-          </select>
         </div>
-
-        {/* Page Navigation */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronDown className="rotate-180 transform" size={16} />
-            <span className="sr-only">Previous Page</span>
-          </Button>
-          <span className="text-sm text-gray-400">
-            Page{" "}
-            <strong>
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </strong>
-          </span>
-          <Button
-            variant="ghost"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronDown size={16} />
-            <span className="sr-only">Next Page</span>
-          </Button>
-        </div>
+      </div>
+      
+      <div className="rounded-lg overflow-hidden border border-gray-800">
+        <Table>
+          <TableCaption>Course progress for all students in your group</TableCaption>
+          <TableHeader className="bg-gray-900">
+            <TableRow>
+              <TableHead 
+                className="text-white cursor-pointer hover:text-secondary transition-colors"
+                onClick={() => requestSort('name')}
+              >
+                Name {getSortDirectionIndicator('name')}
+              </TableHead>
+              <TableHead 
+                className="text-white cursor-pointer hover:text-secondary transition-colors"
+                onClick={() => requestSort('email')}
+              >
+                Email {getSortDirectionIndicator('email')}
+              </TableHead>
+              <TableHead 
+                className="text-white text-right cursor-pointer hover:text-secondary transition-colors"
+                onClick={() => requestSort('progress')}
+              >
+                Progress {getSortDirectionIndicator('progress')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAndSortedData.length > 0 ? (
+              filteredAndSortedData.map((user, index) => (
+                <motion.tr 
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className="group hover:bg-black/40"
+                >
+                  <TableCell className="font-medium text-white border-t border-gray-800">
+                    {user.name}
+                  </TableCell>
+                  <TableCell className="text-gray-300 border-t border-gray-800">
+                    {user.email}
+                  </TableCell>
+                  <TableCell className="text-right border-t border-gray-800">
+                    <div className="flex items-center justify-end gap-3">
+                      <div className="w-full max-w-[120px] h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          className={`h-full rounded-full ${getProgressColor(user.progress)}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${user.progress}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                        />
+                      </div>
+                      <span className={`font-medium ${getTextColorClass(user.progress)}`}>
+                        {user.progress}%
+                      </span>
+                    </div>
+                  </TableCell>
+                </motion.tr>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center text-gray-400 py-8">
+                  No students found matching "{searchTerm}"
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      <div className="mt-4 text-gray-400 text-sm">
+        Showing {filteredAndSortedData.length} of {data.length} students
       </div>
     </div>
-  );
-};
+  )
+}
+
+// Helper functions for styling based on progress
+function getProgressColor(progress: number): string {
+  if (progress < 25) return 'bg-red-500'
+  if (progress < 50) return 'bg-orange-500'
+  if (progress < 75) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
+function getTextColorClass(progress: number): string {
+  if (progress < 25) return 'text-red-400'
+  if (progress < 50) return 'text-orange-400'
+  if (progress < 75) return 'text-yellow-400'
+  return 'text-green-400'
+} 

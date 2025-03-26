@@ -23,14 +23,27 @@ export interface Question {
   export interface Chapter {
     id: string;
     title: string;
-    backgroundImage: string; // URL or path to the image
+    description: string;
+    backgroundImage: string;
     units: Unit[];
+  }
+  
+  export interface Instructor {
+    id: string;
+    name: string;
+    description: string;
+    profileImage: string;
+    role: string;
+    introductionVideo: string;
   }
   
   export interface Semester {
     id: string;
     title: string;
+    description: string;
+    backgroundImage: string;
     chapters: Chapter[];
+    instructors: Instructor[];
   }
 
   

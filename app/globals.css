@@ -25,23 +25,11 @@ body,
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  transition-property: opacity, transform, filter, background;
-  transition-timing-function: ease-in-out;
-  transition-duration: 500ms;
 }
-
-
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
-  }
-
-  .page-transition {
-    opacity: 0;
-    background: black;
-    transform: translateY(40px);
-    filter: blur(12px);
   }
 }
 /* styles/globals.css */
@@ -77,6 +65,7 @@ html {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --background-brightness: 35%;
   }
   .dark {
     --background: 240 10% 3.9%;
@@ -141,10 +130,141 @@ html {
   font-display: swap; /* optional, but recommended */
 }
 
-@font-face{
+@font-face {
   font-family: 'Morion';
-  src: url('/fonts/Morion-Regular.otf') format('opentype');
+  src: url('/fonts/Morion-Regular.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Thin.woff') format('woff');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Regular-Italic.woff') format('woff');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Bold-Italic.woff') format('woff');
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Semibold-Italic.woff') format('woff');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Light-Italic.woff') format('woff');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Morion';
+  src: url('/fonts/Morion-Thin-Italic.woff') format('woff');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(191, 165, 114, 0.5) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(191, 165, 114, 0.5);
+  border-radius: 3px;
+}
+
+/* Target both section backgrounds and the AnimatedBackground component */
+section[style*="background-image"]::before,
+div[style*="background-image"].animated-bg {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: inherit;
+  background-position: inherit;
+  background-size: inherit;
+  background-repeat: inherit;
+  background-blend-mode: inherit;
+  filter: brightness(var(--background-brightness));
+  z-index: 1;
+  transition: filter 0.3s ease-out;
+}
+
+/* Add positioning for AnimatedBackground */
+div[style*="background-image"].animated-bg {
+  position: relative;
+}
+
+/* Keep content above the background */
+section[style*="background-image"] > *,
+div[style*="background-image"].animated-bg > * {
+  position: relative;
+  z-index: 2;
+}
+
+.slider-secondary > span {
+  background-color: hsl(var(--secondary));
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

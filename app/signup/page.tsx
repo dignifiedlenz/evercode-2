@@ -42,7 +42,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-custom2">
+    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-morion">
       <div
         className="
           pl-56

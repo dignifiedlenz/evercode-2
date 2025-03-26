@@ -25,8 +25,8 @@ export default function NoteEditor({ initialContent, onLocalChange }: NoteEditor
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: false, // Disable headings if not needed
-        bulletList: false, // We'll add it manually
+        heading: false,
+        bulletList: false,
         orderedList: false,
         listItem: false,
       }),
@@ -39,7 +39,20 @@ export default function NoteEditor({ initialContent, onLocalChange }: NoteEditor
         types: ["heading", "paragraph"],
       }),
     ],
-    content: editorContent || '<p>Write your notes here...</p>',
+    content: editorContent || {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              content: []
+            }
+          ]
+        }
+      ]
+    },
     onUpdate: ({ editor }) => {
       const json = editor.getJSON() as NoteContent;
       setEditorContent(json);

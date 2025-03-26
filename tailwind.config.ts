@@ -61,7 +61,43 @@ export default {
   				'Neima',
   				'sans-serif'
   			],
-  			custom2: [
+  			morion: [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-light': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-thin': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-semibold': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-bold': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-italic': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-light-italic': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-thin-italic': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-semibold-italic': [
+  				'Morion',
+  				'sans-serif'
+  			],
+  			'morion-bold-italic': [
   				'Morion',
   				'sans-serif'
   			]
