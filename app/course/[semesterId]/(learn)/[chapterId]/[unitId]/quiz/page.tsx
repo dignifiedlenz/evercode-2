@@ -6,11 +6,15 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { saveQuestionProgress, saveUnitProgress } from "@/lib/progress-service";
+import axios from "axios";
 
 interface QuestionState {
   isAnswered: boolean;
   isCorrect: boolean;
   retryTime: number | null;
+  attempts: number;
+  completedAt: number | null;
+  incorrectAnswers: string[];
 }
 
 export default function QuizPage() {
@@ -34,14 +38,15 @@ export default function QuizPage() {
       }, 1000);
     } else if (retryCountdown === 0) {
       setRetryCountdown(null);
-      // Reset question state to allow retry
+      // Reset question state to allow retry, but preserve attempts and incorrect answers
       const currentQuestion = questions[currentQuestionIndex];
       setQuestionStates(prev => ({
         ...prev,
         [currentQuestion.id]: {
+          ...prev[currentQuestion.id],
           isAnswered: false,
           isCorrect: false,
-          retryTime: null
+          retryTime: null,
         }
       }));
       // Clear the selected answer for this question
@@ -61,15 +66,31 @@ export default function QuizPage() {
   const handleAnswerSelect = async (questionId: string, answer: string) => {
     const currentQuestion = questions[currentQuestionIndex];
     const isCorrect = answer === currentQuestion.correctAnswer;
+    const currentState = questionStates[questionId] || {
+      isAnswered: false,
+      isCorrect: false,
+      retryTime: null,
+      attempts: 0,
+      completedAt: null,
+      incorrectAnswers: []
+    };
     
     // Update question state
+    const newState = {
+      ...currentState,
+      isAnswered: true,
+      isCorrect,
+      retryTime: isCorrect ? null : Date.now() + 10000,
+      attempts: currentState.attempts + 1,
+      completedAt: isCorrect ? Date.now() : null,
+      incorrectAnswers: isCorrect 
+        ? currentState.incorrectAnswers 
+        : [...currentState.incorrectAnswers, answer]
+    };
+
     setQuestionStates(prev => ({
       ...prev,
-      [questionId]: {
-        isAnswered: true,
-        isCorrect,
-        retryTime: isCorrect ? null : Date.now() + 10000 // 10 seconds retry delay
-      }
+      [questionId]: newState
     }));
 
     // Save selected answer
@@ -79,42 +100,99 @@ export default function QuizPage() {
     }));
 
     if (isCorrect) {
-      // Save question progress
-      await saveQuestionProgress(
-        unitId as string,
-        chapterId as string,
-        questionId,
-        true
-      );
-
-      // If this was the last question, mark unit as completed
-      if (currentQuestionIndex === questions.length - 1) {
-        await saveUnitProgress(
+      try {
+        // Save question progress
+        await saveQuestionProgress(
           unitId as string,
           chapterId as string,
-          true,
+          questionId,
           true
         );
+
+        // Save additional progress data directly to API
+        const progressData = {
+          questionId,
+          unitId,
+          chapterId,
+          attempts: newState.attempts,
+          completedAt: newState.completedAt ? new Date(newState.completedAt).toISOString() : null,
+          incorrectAnswers: newState.incorrectAnswers
+        };
+        console.log("Sending progress data:", progressData);
         
-        // Navigate to next unit after a delay
-        setTimeout(() => {
-          const currentUnitIndex = chapter?.units.findIndex(u => u.id === unitId);
-          const nextUnit = currentUnitIndex !== undefined && currentUnitIndex !== -1
-            ? chapter?.units[currentUnitIndex + 1]
-            : null;
-          if (nextUnit) {
-            router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/video`);
-          }
-        }, 1500);
-      } else {
-        // Move to next question after a short delay
-        setTimeout(() => {
-          setCurrentQuestionIndex(prev => prev + 1);
-        }, 1000);
+        const response = await axios.post('/api/progress/quiz/details', progressData);
+        console.log("Progress save response:", response.data);
+
+        // If this was the last question, mark unit as completed
+        if (currentQuestionIndex === questions.length - 1) {
+          await saveUnitProgress(
+            unitId as string,
+            chapterId as string,
+            true,
+            true
+          );
+          
+          // Navigate to next unit after a delay
+          setTimeout(() => {
+            const currentUnitIndex = chapter?.units.findIndex(u => u.id === unitId);
+            const nextUnit = currentUnitIndex !== undefined && currentUnitIndex !== -1
+              ? chapter?.units[currentUnitIndex + 1]
+              : null;
+            if (nextUnit) {
+              router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/video`);
+            }
+          }, 1500);
+        } else {
+          // Move to next question after a short delay
+          setTimeout(() => {
+            setCurrentQuestionIndex(prev => prev + 1);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Error saving progress:", error);
+        if (axios.isAxiosError(error)) {
+          console.error("Axios error details:", {
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+          });
+        }
       }
     } else {
-      // Start retry countdown
-      setRetryCountdown(10);
+      try {
+        // Save the incorrect attempt
+        await saveQuestionProgress(
+          unitId as string,
+          chapterId as string,
+          questionId,
+          false
+        );
+      
+        // Save additional progress data directly to API
+        const progressData = {
+          questionId,
+          unitId,
+          chapterId,
+          attempts: newState.attempts,
+          incorrectAnswers: newState.incorrectAnswers
+        };
+        console.log("Sending incorrect attempt data:", progressData);
+        
+        const response = await axios.post('/api/progress/quiz/details', progressData);
+        console.log("Incorrect attempt save response:", response.data);
+
+        // Start retry countdown
+        setRetryCountdown(10);
+      } catch (error) {
+        console.error("Error saving incorrect attempt:", error);
+        if (axios.isAxiosError(error)) {
+          console.error("Axios error details:", {
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+          });
+        }
+      }
     }
   };
 
@@ -148,8 +226,11 @@ export default function QuizPage() {
             transition={{ duration: 0.5 }}
             className="space-y-8"
           >
-            <div className="text-white tracking-widest text-sm">
-              QUESTION {currentQuestionIndex + 1} OF {questions.length}
+            <div className="flex justify-between items-center text-white tracking-widest text-sm">
+              <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
+              {currentQuestionState?.attempts > 0 && (
+                <span>Attempts: {currentQuestionState.attempts}</span>
+              )}
             </div>
 
             <h2 className="text-2xl text-white font-light leading-tight">
@@ -161,6 +242,7 @@ export default function QuizPage() {
                 const isSelected = selectedAnswers[currentQuestion.id] === option;
                 const showResult = currentQuestionState?.isAnswered && isSelected;
                 const isCorrectAnswer = option === currentQuestion.correctAnswer;
+                const wasIncorrectlySelected = currentQuestionState?.incorrectAnswers.includes(option);
 
                 return (
                   <button
@@ -179,7 +261,9 @@ export default function QuizPage() {
                             ? 'border-green-500 bg-green-500/10 text-green-500'
                             : 'border-red-500 bg-red-500/10 text-red-500'
                           : 'border-secondary bg-secondary/10 text-secondary'
-                        : 'border-gray-800 hover:border-gray-700'
+                        : wasIncorrectlySelected
+                          ? 'border-red-500/50 bg-red-500/5'
+                          : 'border-gray-800 hover:border-gray-700'
                       }
                       ${(currentQuestionState?.isAnswered || retryCountdown !== null) 
                         ? 'cursor-not-allowed opacity-75' 
@@ -207,11 +291,21 @@ export default function QuizPage() {
                   }`}
                 >
                   {currentQuestionState.isCorrect ? (
-                    <p>Correct! {currentQuestionIndex < questions.length - 1 ? "Moving to next question..." : "Quiz completed!"}</p>
+                    <div>
+                      <p>Correct! {currentQuestionIndex < questions.length - 1 ? "Moving to next question..." : "Quiz completed!"}</p>
+                      <p className="text-sm mt-1 opacity-75">
+                        Completed in {currentQuestionState.attempts} {currentQuestionState.attempts === 1 ? 'attempt' : 'attempts'}
+                      </p>
+                    </div>
                   ) : (
                     <p>
                       Incorrect. You can try again in{" "}
                       <span className="font-bold">{retryCountdown}</span> seconds.
+                      {currentQuestionState.attempts > 1 && (
+                        <span className="block text-sm mt-1 opacity-75">
+                          Attempt {currentQuestionState.attempts}
+                        </span>
+                      )}
                     </p>
                   )}
                 </motion.div>

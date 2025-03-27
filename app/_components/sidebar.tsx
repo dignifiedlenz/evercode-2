@@ -210,7 +210,7 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
 
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-6">
-            <h3 className="text-2xl font-custom1 text-white mb-4 group-hover:text-secondary transition-colors duration-700 ease-out">
+            <h3 className="text-2xl font-neima text-white mb-4 group-hover:text-secondary transition-colors duration-700 ease-out">
               {chapter.title.replace(/^Chapter \d+:\s*/, '')}
             </h3>
             

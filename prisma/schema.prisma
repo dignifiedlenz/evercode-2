@@ -42,6 +42,7 @@ model UserProgress {
   videoProgress     VideoProgress[]
   questionProgress  QuestionProgress[]
   unitProgress      UnitProgress[]
+  quizProgressDetails QuizProgressDetails[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -100,5 +101,27 @@ model UnitProgress {
   @@index([progressId])
   @@index([unitId])
   @@index([chapterId])
+}
+
+model QuizProgressDetails {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  questionId      String
+  unitId          String
+  chapterId       String
+  attempts        Int       @default(0)
+  completedAt     DateTime?
+  incorrectAnswers String[]
+  progressId      String?   @db.ObjectId
+  progress        UserProgress? @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@index([questionId])
+  @@index([unitId])
+  @@index([chapterId])
+  @@index([progressId])
 }
 

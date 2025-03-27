@@ -370,7 +370,7 @@ export default function DashboardContent({
           <div className="flex flex-col lg:flex-row w-full">
             {/* Left Content Section */}
             <div className="w-full lg:w-2/3 flex flex-col justify-center pl-12 lg:pl-28 py-8 lg:py-0">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-custom1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
                 Welcome Back {firstName || 'User'}!
               </h1>
               <div className="w-full md:w-1/2">
