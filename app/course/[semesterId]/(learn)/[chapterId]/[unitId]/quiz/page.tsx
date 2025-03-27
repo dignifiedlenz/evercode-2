@@ -58,18 +58,7 @@ export default function QuizPage() {
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-black/90 text-white relative">
-      {/* Background Image */}
-      <div className="fixed inset-0 -z-10">
-        <Image
-          src={chapter?.backgroundImage || ""}
-          alt="Background"
-          fill
-          className="object-cover opacity-20"
-        />
-      </div>
-
-
+    <div className="relative">
       {/* Main Content */}
       <main className="pt-32 px-8 max-w-4xl font-morion mx-auto">
         <AnimatePresence mode="wait">
@@ -81,11 +70,11 @@ export default function QuizPage() {
             transition={{ duration: 0.5 }}
             className="space-y-8"
           >
-            <div className="text-gray-400 tracking-widest text-sm">
+            <div className="text-white tracking-widest text-sm">
               QUESTION {currentQuestionIndex + 1}
             </div>
 
-            <h2 className="text-4xl font-light leading-tight">
+            <h2 className="text-4xl text-white font-light leading-tight">
               {currentQuestion.question}
             </h2>
 
@@ -94,7 +83,7 @@ export default function QuizPage() {
                 <button
                   key={option}
                   onClick={() => handleAnswerSelect(currentQuestion.id, option)}
-                  className={`w-full text-left p-6 border rounded-sm transition-all
+                  className={`w-full text-white text-left p-6 border rounded-sm transition-all
                     ${selectedAnswers[currentQuestion.id] === option
                       ? 'border-secondary bg-secondary/10 text-secondary'
                       : 'border-gray-800 hover:border-gray-700'
@@ -109,7 +98,7 @@ export default function QuizPage() {
       </main>
 
       {/* Progress Bar */}
-      <div   className="fixed top-15 left-0 right-0 p-20">
+      <div className="fixed top-15 left-0 right-0 p-20">
         <div className="max-w-4xl mx-auto">
           <div className="w-full bg-gray-800 h-[2px]">
             <div 

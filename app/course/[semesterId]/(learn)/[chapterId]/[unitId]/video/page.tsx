@@ -120,10 +120,10 @@ export default function VideoPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-custom1 text-white text-center mb-8">
+        <h1 className="text-3xl font-neima uppercase text-white text-center mb-8">
           {unit.video.title}
         </h1>
-        <div className="aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl">
+        <div className="aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl z-10">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>

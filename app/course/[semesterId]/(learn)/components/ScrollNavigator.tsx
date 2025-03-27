@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, useSpring, useTransform, animate } from "framer-motion";
 import Image from "next/image";
+import { useRouter, useParams } from 'next/navigation';
+import courseData from '@/app/_components/(semester1)/courseData';
 
 interface ScrollNavigatorProps {
   onUpClick: () => void;
@@ -31,6 +33,8 @@ export default function ScrollNavigator({
   const lastWheelTime = useRef(Date.now());
   const wheelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const scrollVelocityRef = useRef(0);
+  const router = useRouter();
+  const { semesterId, chapterId, unitId } = useParams();
   
   // Smooth scroll progress with immediate response
   const scrollProgress = useSpring(0.5, {
@@ -43,6 +47,107 @@ export default function ScrollNavigator({
 
   // Transform progress to indicator position (0-100%)
   const indicatorY = useTransform(scrollProgress, [0, 1], [0, 100]);
+
+  // Improved navigation logic with detailed logging
+  const navigateToAdjacentUnit = (direction: 'next' | 'prev') => {
+    // 1. Find the current semester
+    console.log('Current params:', { semesterId, chapterId, unitId });
+    console.log('Course data available:', !!courseData);
+    
+    const semester = courseData.find(sem => sem.id === semesterId);
+    if (!semester) {
+      console.error('Semester not found:', semesterId);
+      return;
+    }
+    
+    // 2. Find the current chapter and its index
+    console.log('Chapters in semester:', semester.chapters.length);
+    const chapterIndex = semester.chapters.findIndex(ch => ch.id === chapterId);
+    if (chapterIndex === -1) {
+      console.error('Chapter not found:', chapterId);
+      return;
+    }
+    
+    const currentChapter = semester.chapters[chapterIndex];
+    console.log('Current chapter:', currentChapter.title, 'with', currentChapter.units.length, 'units');
+    
+    // 3. Find the current unit and its index
+    const unitIndex = currentChapter.units.findIndex(u => u.id === unitId);
+    if (unitIndex === -1) {
+      console.error('Unit not found:', unitId);
+      return;
+    }
+    
+    console.log('Current unit index:', unitIndex);
+    
+    // 4. Determine target based on direction
+    if (direction === 'next') {
+      if (unitIndex < currentChapter.units.length - 1) {
+        // Next unit in same chapter
+        const nextUnit = currentChapter.units[unitIndex + 1];
+        const unitType = determineUnitType(nextUnit);
+        
+        console.log('Navigating to next unit in same chapter:', nextUnit.id, unitType);
+        router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/${unitType}`);
+      } else if (chapterIndex < semester.chapters.length - 1) {
+        // First unit of next chapter
+        const nextChapter = semester.chapters[chapterIndex + 1];
+        if (nextChapter.units.length > 0) {
+          const firstUnit = nextChapter.units[0];
+          const unitType = determineUnitType(firstUnit);
+          
+          console.log('Navigating to first unit of next chapter:', nextChapter.id, firstUnit.id, unitType);
+          router.push(`/course/${semesterId}/${nextChapter.id}/${firstUnit.id}/${unitType}`);
+        }
+      }
+    } else {
+      // Previous direction
+      if (unitIndex > 0) {
+        // Previous unit in same chapter
+        const prevUnit = currentChapter.units[unitIndex - 1];
+        const unitType = determineUnitType(prevUnit);
+        
+        console.log('Navigating to previous unit in same chapter:', prevUnit.id, unitType);
+        router.push(`/course/${semesterId}/${chapterId}/${prevUnit.id}/${unitType}`);
+      } else if (chapterIndex > 0) {
+        // Last unit of previous chapter
+        const prevChapter = semester.chapters[chapterIndex - 1];
+        if (prevChapter.units.length > 0) {
+          const lastUnit = prevChapter.units[prevChapter.units.length - 1];
+          const unitType = determineUnitType(lastUnit);
+          
+          console.log('Navigating to last unit of previous chapter:', prevChapter.id, lastUnit.id, unitType);
+          router.push(`/course/${semesterId}/${prevChapter.id}/${lastUnit.id}/${unitType}`);
+        }
+      }
+    }
+  };
+  
+  // Helper function to determine the unit type (video or quiz)
+  const determineUnitType = (unit: any): string => {
+    // Check various possible structures based on your courseData format
+    if (unit.type) {
+      return unit.type; // If unit has an explicit type property
+    } else if (unit.video) {
+      return 'video';
+    } else if (unit.quiz || unit.questions) {
+      return 'quiz';
+    } else if (unit.content_type) {
+      return unit.content_type.toLowerCase();
+    } else {
+      // Fallback to default type
+      console.warn('Could not determine unit type, defaulting to video', unit);
+      return 'video';
+    }
+  };
+  
+  const handleScrollUp = () => {
+    navigateToAdjacentUnit('prev');
+  };
+  
+  const handleScrollDown = () => {
+    navigateToAdjacentUnit('next');
+  };
 
   // Function to snap back to middle immediately
   const snapToMiddle = useCallback(() => {
