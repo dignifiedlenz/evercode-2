@@ -61,11 +61,11 @@ export default function ProgressBar({ currentChapterId, currentUnitId, currentSe
   const progressPercentage = calculateProgressPercentage();
 
   return (
-    <div className="fixed left-12 inset-y-0 flex flex-col items-center z-20">
+    <div className="fixed left-5 sm:left-12 inset-y-0 flex flex-col items-center z-20">
       {/* Container for spacing */}
-      <div className="h-full py-24 flex flex-col justify-between">
+      <div className="h-full py-28 sm:py-24 flex flex-col justify-between">
         {/* Progress bar container */}
-        <div className="w-[2px] h-full relative">
+        <div className="w-[1px] sm:w-[2px] h-full relative">
           {/* Background bar */}
           <div className="absolute inset-0 bg-zinc-500" />
           
@@ -100,9 +100,9 @@ export default function ProgressBar({ currentChapterId, currentUnitId, currentSe
                 >
                   <div
                     className={`
-                      w-3 h-3 transform rotate-45 cursor-pointer
+                      w-2 h-2 sm:w-3 sm:h-3 transform rotate-45 cursor-pointer
                       ${isCurrentUnit && !isCurrentQuiz
-                        ? 'bg-white border-2 border-secondary' 
+                        ? 'bg-white border-[1.5px] sm:border-2 border-secondary' 
                         : isPastUnit
                           ? 'bg-secondary'
                           : 'bg-zinc-400 hover:bg-secondary'
@@ -116,7 +116,7 @@ export default function ProgressBar({ currentChapterId, currentUnitId, currentSe
                   
                   {/* Video tooltip */}
                   {hoveredUnit === unit.id && (
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 bg-secondary/90 text-white px-3 py-1 rounded text-sm whitespace-nowrap">
+                    <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 bg-secondary/90 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap">
                       {unit.title || `Unit ${index + 1}`}
                     </div>
                   )}
@@ -130,9 +130,9 @@ export default function ProgressBar({ currentChapterId, currentUnitId, currentSe
                   >
                     <div
                       className={`
-                        w-2.5 h-2.5 rounded-full cursor-pointer
+                        w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full cursor-pointer
                         ${isCurrentUnit && isCurrentQuiz
-                          ? 'bg-white border-2 border-secondary' 
+                          ? 'bg-white border-[1.5px] sm:border-2 border-secondary' 
                           : isPastUnit
                             ? 'bg-secondary'
                             : 'bg-zinc-400 hover:bg-secondary'
@@ -146,7 +146,7 @@ export default function ProgressBar({ currentChapterId, currentUnitId, currentSe
                     
                     {/* Quiz tooltip */}
                     {hoveredUnit === `${unit.id}-quiz` && (
-                      <div className="absolute left-6 top-1/2 -translate-y-1/2 bg-secondary/90 text-white px-3 py-1 rounded text-sm whitespace-nowrap">
+                      <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 bg-secondary/90 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap">
                         {unit.title ? `${unit.title} Quiz` : `Unit ${index + 1} Quiz`}
                       </div>
                     )}

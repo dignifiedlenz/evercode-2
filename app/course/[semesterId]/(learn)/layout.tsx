@@ -179,11 +179,13 @@ export default function LearnLayout({
   return (
     <div className="relative min-h-screen">
       {children}
-      <ScrollNavigator
-        onUpClick={handleScrollUp}
-        onDownClick={handleScrollDown}
-        currentSection={currentSection}
-      />
+      <div className="hidden sm:block">
+        <ScrollNavigator
+          onUpClick={handleScrollUp}
+          onDownClick={handleScrollDown}
+          currentSection={currentSection}
+        />
+      </div>
       <ProgressBar
         currentChapterId={chapterId as string}
         currentUnitId={unitId as string}

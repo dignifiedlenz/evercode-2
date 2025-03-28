@@ -99,30 +99,34 @@ export default function QuizPage() {
       [questionId]: answer
     }));
 
-    if (isCorrect) {
-      try {
-        // Save question progress
-        await saveQuestionProgress(
+    try {
+      // Save progress data
+      const progressData = {
+        questionId,
+        unitId,
+        chapterId,
+        attempts: newState.attempts,
+        completedAt: newState.completedAt ? new Date(newState.completedAt).toISOString() : null,
+        incorrectAnswers: newState.incorrectAnswers
+      };
+
+      // Save both basic and detailed progress
+      const [basicProgressResponse, detailedProgressResponse] = await Promise.all([
+        saveQuestionProgress(
           unitId as string,
           chapterId as string,
           questionId,
-          true
-        );
+          isCorrect
+        ),
+        axios.post('/api/progress/quiz/details', progressData)
+      ]);
 
-        // Save additional progress data directly to API
-        const progressData = {
-          questionId,
-          unitId,
-          chapterId,
-          attempts: newState.attempts,
-          completedAt: newState.completedAt ? new Date(newState.completedAt).toISOString() : null,
-          incorrectAnswers: newState.incorrectAnswers
-        };
-        console.log("Sending progress data:", progressData);
-        
-        const response = await axios.post('/api/progress/quiz/details', progressData);
-        console.log("Progress save response:", response.data);
+      console.log("Progress save responses:", {
+        basic: basicProgressResponse,
+        detailed: detailedProgressResponse.data
+      });
 
+      if (isCorrect) {
         // If this was the last question, mark unit as completed
         if (currentQuestionIndex === questions.length - 1) {
           await saveUnitProgress(
@@ -148,51 +152,21 @@ export default function QuizPage() {
             setCurrentQuestionIndex(prev => prev + 1);
           }, 1000);
         }
-      } catch (error) {
-        console.error("Error saving progress:", error);
-        if (axios.isAxiosError(error)) {
-          console.error("Axios error details:", {
-            response: error.response?.data,
-            status: error.response?.status,
-            headers: error.response?.headers
-          });
-        }
-      }
-    } else {
-      try {
-        // Save the incorrect attempt
-        await saveQuestionProgress(
-          unitId as string,
-          chapterId as string,
-          questionId,
-          false
-        );
-      
-        // Save additional progress data directly to API
-        const progressData = {
-          questionId,
-          unitId,
-          chapterId,
-          attempts: newState.attempts,
-          incorrectAnswers: newState.incorrectAnswers
-        };
-        console.log("Sending incorrect attempt data:", progressData);
-        
-        const response = await axios.post('/api/progress/quiz/details', progressData);
-        console.log("Incorrect attempt save response:", response.data);
-
-        // Start retry countdown
+      } else {
+        // Start retry countdown for incorrect answers
         setRetryCountdown(10);
-      } catch (error) {
-        console.error("Error saving incorrect attempt:", error);
-        if (axios.isAxiosError(error)) {
-          console.error("Axios error details:", {
-            response: error.response?.data,
-            status: error.response?.status,
-            headers: error.response?.headers
-          });
-        }
       }
+    } catch (error) {
+      console.error("Error saving progress:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Axios error details:", {
+          response: error.response?.data,
+          status: error.response?.status,
+          headers: error.response?.headers
+        });
+      }
+      // Show error to user
+      alert("Failed to save progress. Please try again.");
     }
   };
 
@@ -224,16 +198,16 @@ export default function QuizPage() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="space-y-8"
+            className="ml-6 space-y-8"
           >
             <div className="flex justify-between items-center text-white tracking-widest text-sm">
               <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
               {currentQuestionState?.attempts > 0 && (
-                <span>Attempts: {currentQuestionState.attempts}</span>
+                <span className="text-xs sm:text-sm">Attempts: {currentQuestionState.attempts}</span>
               )}
             </div>
 
-            <h2 className="text-2xl text-white font-light leading-tight">
+            <h2 className="text-xl sm:text-2xl text-white font-light leading-tight">
               {currentQuestion.question}
             </h2>
 

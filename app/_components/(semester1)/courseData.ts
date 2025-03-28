@@ -5,7 +5,7 @@ import { Semester} from "@/types/course";
 export const courseData: Semester[] = [
   {
     id: "semester-1",
-    title: "Semester 1: Introduction to Web Development",
+    title: "Semester 1: Back to Basics",
     description: "Building the fundamentals of web development",
     backgroundImage: "/sm/306383rg.jpeg",
     instructors: [
@@ -1364,7 +1364,7 @@ export const courseData: Semester[] = [
   },
   {
     id: "semester-2",
-    title: "Semester 2: Advanced Frontend Development",
+    title: "Semester 2: Back to Basics II",
     description: "Master modern frontend frameworks and tools",
     backgroundImage: "/sm/516038ldsdl.jpeg",
     instructors: [

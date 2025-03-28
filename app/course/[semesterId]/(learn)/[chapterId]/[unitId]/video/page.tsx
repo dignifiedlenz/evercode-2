@@ -118,15 +118,15 @@ export default function VideoPage() {
   }, [unitId, chapterId, unit.video.id]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-neima uppercase text-white text-center mb-8">
+    <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-4 py-16 sm:p-4">
+      <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-neima uppercase text-white text-center mb-4 sm:mb-8 px-2">
           {unit.video.title}
         </h1>
-        <div className="aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl z-10">
+        <div className="aspect-video bg-black rounded-lg sm:rounded-xl overflow-hidden relative shadow-2xl z-10">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-white"></div>
             </div>
           )}
           <video 
@@ -134,6 +134,8 @@ export default function VideoPage() {
             controls 
             src={unit.video.videoUrl}
             className="w-full h-full"
+            playsInline
+            preload="metadata"
           />
         </div>
       </div>

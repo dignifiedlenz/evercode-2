@@ -4,8 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import UserMenu from "../_components/UserMenu";
 import { redirect } from "next/navigation";
-import { Logo } from "@/app/_components/_media/logo";
-import Link from "next/link";
+import LogoSection from "@/app/_components/LogoSection";
 import Sidebar from "@/app/_components/sidebar";
 import courseData from "@/app/_components/(semester1)/courseData";
 import SemesterSelector from "@/app/_components/SemesterSelector";
@@ -73,16 +72,8 @@ export default async function CourseLayout({
         />
       </div>
 
-      {/* Logo */}
-      <Link href="/course" className="fixed left-5 top-3 opacity-65 hover:opacity-100 z-50">
-        <Logo />
-      </Link>
-
-      {/* Logo Text and Semester Selector */}
-      <div className="fixed left-20 top-3 flex flex-col items-start font-morion opacity-100 z-50">
-        <img src="/EvermodeTypeLogo.svg" alt="Evermode" className="w-40 h-10" />
-        <SemesterSelector currentSemester={currentSemester}/>
-      </div>
+      {/* Logo Section */}
+      <LogoSection completedUnits={completedUnits} />
 
       {/* User Menu (Top Right) */}
       <div className="fixed z-50 top-5 right-5">

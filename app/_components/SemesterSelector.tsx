@@ -41,11 +41,11 @@ export default function SemesterSelector({ currentSemester, onSemesterChange }: 
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-start gap-2 text-sm pl-1 text-white/60 hover:text-white transition-colors duration-200"
+        className="flex items-start gap-1 sm:gap-2 text-xs sm:text-sm pl-1 text-white/60 hover:text-white transition-colors duration-200"
       >
         <span>Semester {displayedSemester}</span>
         <svg 
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -55,12 +55,12 @@ export default function SemesterSelector({ currentSemester, onSemesterChange }: 
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-40 bg-zinc-900 rounded-sm shadow-lg border border-white/10 overflow-hidden z-50">
+        <div className="absolute top-full left-0 mt-1 w-32 sm:w-40 bg-zinc-900 rounded-sm shadow-lg border border-white/10 overflow-hidden z-50">
           {[1, 2, 3].map((semester) => (
             <button
               key={semester}
               onClick={() => handleSemesterChange(semester)}
-              className={`w-full px-4 py-2 text-left text-sm transition-colors duration-200 flex items-center justify-between ${
+              className={`w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors duration-200 flex items-center justify-between ${
                 semester === displayedSemester
                   ? 'bg-secondary/20 text-secondary'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -68,7 +68,7 @@ export default function SemesterSelector({ currentSemester, onSemesterChange }: 
             >
               <span>Semester {semester}</span>
               {semester === displayedSemester && (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               )}

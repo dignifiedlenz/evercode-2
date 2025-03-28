@@ -45,13 +45,13 @@ export default function DashboardContent({
     unitId: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Add a local state to force refresh when progress updates
   const [progressVersion, setProgressVersion] = useState(0);
   const [nextUnitInfo, setNextUnitInfo] = useState<{
     chapterTitle: string;
     unitTitle: string;
   } | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [progressData, setProgressData] = useState<UserProgress | null>(null);
 
   const semester = courseData.find(sem => sem.id === `semester-${currentSemester}`);
   const instructors = semester?.instructors || [];
@@ -70,56 +70,6 @@ export default function DashboardContent({
     });
     return units;
   }, []);
-
-  // Listen for progress update events and refresh the data
-  useEffect(() => {
-    // Function to handle progress update events
-    const handleProgressUpdate = () => {
-      console.log("Progress update detected, refreshing next unit data");
-      // Increment version to trigger a refresh
-      setProgressVersion(prev => prev + 1);
-      // Fetch the latest progress data from the server
-      fetch('/api/progress')
-        .then(res => {
-          // Check if response is ok before trying to parse JSON
-          if (!res.ok) {
-            throw new Error(`API responded with status: ${res.status}`);
-          }
-          return res.text(); // Get text instead of directly parsing JSON
-        })
-        .then(text => {
-          // Try to parse the JSON, but handle empty or invalid responses
-          if (!text) return {};
-          try {
-            return JSON.parse(text);
-          } catch (e) {
-            console.error("Invalid JSON response:", text);
-            return {};
-          }
-        })
-        .then(data => {
-          console.log("Fetched updated progress data:", data);
-          // Re-run the findNextIncompleteUnit logic with updated data
-          const result = findNextIncompleteUnit(data.progress?.unitProgress ? data.progress : completedUnits);
-          if (result) {
-            setNextIncompleteUnit(result);
-            // Find the unit and chapter titles for display
-            updateNextUnitInfo(result);
-          }
-        })
-        .catch(error => {
-          console.error("Failed to fetch updated progress:", error);
-        });
-    };
-
-    // Add event listener for progress updates
-    window.addEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
-
-    // Clean up event listener on unmount
-    return () => {
-      window.removeEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
-    };
-  }, [completedUnits]); // Only re-add the listener if completedUnits changes
 
   // Update the next unit info with titles
   const updateNextUnitInfo = useCallback((unitData: { semesterId: string; chapterId: string; unitId: string }) => {
@@ -302,60 +252,87 @@ export default function DashboardContent({
 
     console.log("All units appear to be completed or in progress");
     return null;
-  }, [courseData]); // Now depends on courseData
+  }, [courseData]);
 
-  // Find the next incomplete unit when component mounts or when completedUnits change
+  // Fetch progress data when component mounts and when progress updates
   useEffect(() => {
-    console.log("Finding next incomplete unit on mount or when completedUnits change");
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch('/api/progress');
+        if (!response.ok) throw new Error('Failed to fetch progress');
+        const data = await response.json();
+        setProgressData(data.progress);
+        
+        // Find next incomplete unit with the fresh data
+        const nextUnit = findNextIncompleteUnit(data.progress);
+        setNextIncompleteUnit(nextUnit);
+        
+        if (nextUnit) {
+          updateNextUnitInfo(nextUnit);
+        } else {
+          setNextUnitInfo(null);
+        }
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     setIsLoading(true);
-    
-    const nextUnit = findNextIncompleteUnit(completedUnits);
-    setNextIncompleteUnit(nextUnit);
-    
-    if (nextUnit) {
-      // Find chapter and unit titles for the next unit
-      updateNextUnitInfo(nextUnit);
-    } else {
-      setNextUnitInfo(null);
-    }
-    
-    setIsLoading(false);
-  }, [findNextIncompleteUnit, completedUnits, updateNextUnitInfo]);
+    fetchProgress();
+  }, [findNextIncompleteUnit, updateNextUnitInfo]);
+
+  // Listen for progress update events and refresh the data
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      console.log("Progress update detected, refreshing data");
+      fetch('/api/progress')
+        .then(res => res.json())
+        .then(data => {
+          setProgressData(data.progress);
+          const nextUnit = findNextIncompleteUnit(data.progress);
+          setNextIncompleteUnit(nextUnit);
+          if (nextUnit) {
+            updateNextUnitInfo(nextUnit);
+          }
+        })
+        .catch(error => {
+          console.error("Failed to fetch updated progress:", error);
+        });
+    };
+
+    window.addEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
+    return () => window.removeEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
+  }, [findNextIncompleteUnit, updateNextUnitInfo]);
 
   // Navigate to the next incomplete unit 
   const navigateToNextUnit = useCallback(() => {
+    if (!nextIncompleteUnit || isLoading || isNavigating) return;
+    
     setIsNavigating(true);
-    console.log("Navigating to next unit...");
+    console.log("Navigating to next unit:", nextIncompleteUnit);
     
-    // Use completedUnits instead of the progress number
-    const nextUnit = findNextIncompleteUnit(completedUnits);
-    console.log("Next unit to navigate to:", nextUnit);
+    const { semesterId, chapterId, unitId } = nextIncompleteUnit;
     
-    if (nextUnit) {
-      const { semesterId, chapterId, unitId } = nextUnit;
-      
-      // Use the new routing structure
-      const courseUrl = `/course/${semesterId.replace('semester-', '')}/${chapterId}/${unitId}/video`;
-      console.log(`Navigating to: ${courseUrl}`);
-      
-      // Wait a brief moment to ensure state is updated before navigation
-      setTimeout(() => {
-        try {
-          // Force a hard navigation to ensure the course page loads fresh
-          window.location.href = courseUrl;
-          console.log("Navigation initiated with direct URL change");
-        } catch (error) {
-          console.error("Error during navigation:", error);
-          setIsNavigating(false);
-        }
-      }, 100);
-    } else {
-      setIsNavigating(false);
-    }
-  }, [findNextIncompleteUnit, completedUnits]);
+    // Determine whether to navigate to video or quiz based on progress
+    const unitProgress = progressData?.unitProgress?.find(
+      up => up.unitId === unitId && up.chapterId === chapterId
+    );
+    
+    const videoProgress = progressData?.videoProgress?.find(
+      vp => vp.unitId === unitId && vp.chapterId === chapterId
+    );
+    
+    // If video is not completed, go to video. Otherwise, go to quiz
+    const section = (!videoProgress?.completed) ? 'video' : 'quiz';
+    
+    // Use Next.js router for client-side navigation
+    router.push(`/course/${semesterId}/${chapterId}/${unitId}/${section}`);
+  }, [nextIncompleteUnit, isLoading, isNavigating, progressData, router]);
 
   return (
-    <div className="flex flex-col min-h-screen w-full text-white">
+    <div className="pt-24 sm:pt-0 flex flex-col min-h-screen w-full text-white overflow-y-auto">
       <div
         className="min-h-screen bg-cover bg-center transition-all duration-1000"
         style={{
@@ -369,12 +346,12 @@ export default function DashboardContent({
           {/* Main Content */}
           <div className="flex flex-col lg:flex-row w-full">
             {/* Left Content Section */}
-            <div className="w-full lg:w-2/3 flex flex-col justify-center pl-12 lg:pl-28 py-8 lg:py-0">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
+            <div className="w-full py-6 lg:w-2/3 flex flex-col justify-center px-6 sm:px-8 lg:pl-28 lg:py-0">
+              <h1 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
                 Welcome Back {firstName || 'User'}!
               </h1>
-              <div className="w-full md:w-1/2">
-                <p className="text-xs sm:text-sm md:text-base mb-2">Your Progress</p>
+              <div className="w-full sm:w-3/4 md:w-1/2">
+                <p className="text-xs font-morion sm:text-sm md:text-base mb-2">Your Progress</p>
                 <div className="w-full bg-zinc-800 h-1.5 sm:h-2">
                   <div
                     className="bg-white h-1.5 sm:h-2"
@@ -384,11 +361,11 @@ export default function DashboardContent({
               </div>
 
               {/* Resume Course Button */}
-              <div className="mt-4 mb-2">
+              <div className="mt-6 font-morion mb-4">
                 <button
                   onClick={navigateToNextUnit}
                   disabled={!nextIncompleteUnit || isLoading || isNavigating}
-                  className={`px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
+                  className={`w-full sm:w-auto px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
                     ${!nextIncompleteUnit || isLoading || isNavigating 
                       ? 'bg-zinc-700 cursor-not-allowed text-zinc-400' 
                       : 'bg-secondary hover:bg-opacity-80 text-black'}`}
@@ -408,12 +385,10 @@ export default function DashboardContent({
                 </button>
               </div>
 
-              {/* Divider */}
-              <div className="w-full md:w-1/2 h-px bg-gradient-to-r from-transparent via-secondary/50 to-transparent my-6 sm:my-8"></div>
 
               {/* Teachers Section */}
-              <div className="w-full md:w-1/2">
-                <p className="text-xs sm:text-sm md:text-base mb-4">Your Instructors for this semester</p>
+              <div className="w-full sm:w-3/4 md:w-1/2">
+                <p className="font-morion text-xs sm:text-sm md:text-base mb-4">Your Instructors for this semester</p>
                 <div className="flex items-center gap-4 sm:gap-6">
                   {instructors.map((instructor, index) => (
                     <button 
@@ -440,7 +415,7 @@ export default function DashboardContent({
             {/* Right Sidebar Section */}
             <div className="w-full lg:w-1/3 flex flex-col lg:flex-row items-center justify-center py-8 lg:py-0">
               <aside className="flex p-5 justify-center w-full">
-                <nav>
+                <nav className="w-full max-w-sm">
                   <ul className="space-y-3 sm:space-y-4 p-5 bg-black/50 backdrop-blur-lg font-morion text-xs sm:text-sm md:text-base lg:text-lg rounded-sm">
                     {([
                       { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
