@@ -176,7 +176,7 @@ export default function QuizPage() {
   return (
     <div className="relative">
       {/* Progress Bar */}
-      <div className="fixed top-15 left-0 right-0 p-20 z-40">
+      <div className="fixed top-32 pl-2 sm:left-24 w-[85vw] z-40">
         <div className="max-w-4xl mx-auto">
           <div className="w-full bg-gray-800 h-[2px]">
             <motion.div 
@@ -190,7 +190,7 @@ export default function QuizPage() {
       </div>
 
       {/* Main Content */}
-      <main className="pt-32 px-8 max-w-4xl font-morion mx-auto relative z-50">
+      <main className="pt-40 sm:px-8 sm:max-w-[60vw] font-morion relative z-50">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -198,16 +198,16 @@ export default function QuizPage() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="ml-6 space-y-8"
+            className="space-y-8"
           >
-            <div className="flex justify-between items-center text-white tracking-widest text-sm">
+            <div className="flex px-2 justify-between items-center text-white tracking-widest text-sm">
               <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
               {currentQuestionState?.attempts > 0 && (
                 <span className="text-xs sm:text-sm">Attempts: {currentQuestionState.attempts}</span>
               )}
             </div>
 
-            <h2 className="text-xl sm:text-2xl text-white font-light leading-tight">
+            <h2 className="text-xl px-2 sm:text-2xl text-white font-light leading-tight">
               {currentQuestion.question}
             </h2>
 
@@ -228,7 +228,7 @@ export default function QuizPage() {
                     }}
                     disabled={currentQuestionState?.isAnswered || retryCountdown !== null}
                     className={`
-                      relative z-50 w-full text-white text-left p-6 border rounded-sm transition-all
+                      relative z-50 w-full text-white text-left p-2 sm:p-6 border rounded-sm transition-all
                       ${isSelected
                         ? showResult
                           ? isCorrectAnswer

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, TouchEvent } from "react";
 import { motion, useSpring, useTransform, animate } from "framer-motion";
 import Image from "next/image";
 import { useRouter, useParams } from 'next/navigation';
@@ -35,6 +35,9 @@ export default function ScrollNavigator({
   const scrollVelocityRef = useRef(0);
   const router = useRouter();
   const { semesterId, chapterId, unitId } = useParams();
+  const touchStartY = useRef<number>(0);
+  const touchStartX = useRef<number>(0);
+  const minSwipeDistance = 50; // minimum swipe distance in pixels
   
   // Smooth scroll progress with immediate response
   const scrollProgress = useSpring(0.5, {
@@ -188,6 +191,79 @@ export default function ScrollNavigator({
     }, 1000);
   }, [onUpClick, onDownClick, snapToMiddle]);
 
+  // Add touch handlers
+  const handleTouchStart = (e: TouchEvent) => {
+    if (isAnimating.current || isScrollLocked) return;
+    
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (isAnimating.current || isScrollLocked) return;
+    
+    const touchY = e.touches[0].clientY;
+    const touchX = e.touches[0].clientX;
+    
+    // Calculate deltas
+    const deltaY = touchStartY.current - touchY;
+    const deltaX = touchStartX.current - touchX;
+    
+    // Only proceed if vertical swipe is more significant than horizontal
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      e.preventDefault(); // Prevent default scrolling
+      
+      // Convert touch movement to scroll delta (similar to wheel event)
+      accumulatedDelta.current = Math.max(
+        -maxDelta,
+        Math.min(maxDelta, deltaY * 2)
+      );
+      
+      // Convert accumulated delta to progress (0-1)
+      const newProgress = (accumulatedDelta.current + maxDelta) / (maxDelta * 2);
+      setProgress(newProgress);
+      scrollProgress.set(newProgress);
+      
+      // Check threshold
+      const hasReachedThreshold = newProgress > 0.85 || newProgress < 0.15;
+      setReachedThreshold(hasReachedThreshold);
+    }
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (isAnimating.current || isScrollLocked) return;
+    
+    const touchY = e.changedTouches[0].clientY;
+    const touchX = e.changedTouches[0].clientX;
+    
+    const deltaY = touchStartY.current - touchY;
+    const deltaX = touchStartX.current - touchX;
+    
+    // Only trigger if vertical swipe is more significant than horizontal
+    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= minSwipeDistance) {
+      const direction = deltaY > 0 ? "down" : "up";
+      handlePageTransition(direction);
+    } else {
+      // If swipe wasn't long enough, snap back to middle
+      snapToMiddle();
+    }
+  };
+
+  // Add touch event listeners
+  useEffect(() => {
+    const element = document.documentElement;
+    
+    element.addEventListener("touchstart", handleTouchStart as any, { passive: false });
+    element.addEventListener("touchmove", handleTouchMove as any, { passive: false });
+    element.addEventListener("touchend", handleTouchEnd as any, { passive: false });
+    
+    return () => {
+      element.removeEventListener("touchstart", handleTouchStart as any);
+      element.removeEventListener("touchmove", handleTouchMove as any);
+      element.removeEventListener("touchend", handleTouchEnd as any);
+    };
+  }, [handlePageTransition, snapToMiddle, isScrollLocked]);
+
   useEffect(() => {
     let lastDelta = 0;
     let lastTime = Date.now();
@@ -254,7 +330,7 @@ export default function ScrollNavigator({
   }, [scrollProgress, handlePageTransition, snapToMiddle, isScrollLocked]);
 
   return (
-    <div className="fixed right-8 top-1/2 -translate-y-1/2 h-72 flex flex-col items-center">
+    <div className="fixed right-8 top-1/2 -translate-y-1/2 h-72 flex flex-col items-center touch-none">
       <div className="flex flex-col items-center h-full justify-between">
         {/* Up Arrow */}
         <button 

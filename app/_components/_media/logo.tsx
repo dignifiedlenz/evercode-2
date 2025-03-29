@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export const Logo = () => {
     return (
-        <div className="relative w-8 h-8 sm:w-[60px] sm:h-[60px]">
+        <div className="relative w-[6vh] h-[6vh] sm:w-[60px] sm:h-[60px]">
             <Image
                 fill
                 alt="logo"

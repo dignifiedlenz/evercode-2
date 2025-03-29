@@ -64,11 +64,11 @@ const UserMenu: React.FC = () => {
     };
 
     return (
-        <div className="fixed top-6 right-6 z-50">
+        <div className="fixed top-3 right-3 sm:right-6 sm:top-6 z-50">
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                     <button
-                        className="flex items-center justify-center w-12 h-12 rounded-full "
+                        className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full focus:outline-none"
                         aria-label="User Menu"
                     >
                         {/* Replace the src with your actual avatar URL or leave as undefined to use the default icon */}
@@ -80,8 +80,8 @@ const UserMenu: React.FC = () => {
                             className="w-full h-full rounded-full object-cover"
                         />
                         {/* Default User Icon for smaller screens or if avatar not available */}
-                        <User className="w-6 h-6 text-gray-600 md:hidden" />
-                        <ChevronDown className="ml-2 w-4 h-4 text-gray-600" />
+                        <User className="w-2 h-2 sm:w-6 sm:h-6 text-gray-600 md:hidden" />
+                        <ChevronDown className="ml-2 w-2 h-2 sm:w-4 sm:h-4 text-gray-600" />
                     </button>
                 </DropdownMenu.Trigger>
 

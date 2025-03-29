@@ -51,7 +51,11 @@ export default async function AdminDashboardPage() {
       email: true,
       firstName: true,
       lastName: true,
-      completedUnits: true,
+      progress: {
+        include: {
+          unitProgress: true
+        }
+      }
     },
     orderBy: {
       lastName: 'asc'
@@ -67,10 +71,13 @@ export default async function AdminDashboardPage() {
 
   // Format user data for display
   const userData: UserData[] = users.map((user) => {
-    // Calculate completed units and progress
-    const completedUnits = user.completedUnits
-      ? Object.values(user.completedUnits as Record<string, string[]>).flat().length
-      : 0;
+    // Calculate completed units from progress data
+    const completedUnits = user.progress?.unitProgress.reduce((acc, progress) => {
+      if (progress.questionsCompleted && progress.videoCompleted) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0) || 0;
     
     const progress = totalUnits > 0 
       ? Math.round((completedUnits / totalUnits) * 100) 

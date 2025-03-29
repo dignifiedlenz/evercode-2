@@ -33,13 +33,28 @@ export default async function CourseLayout({
   // 3. Fetch user data from database
   const dbUser = await prisma.user.findUnique({
     where: { email: session.user.email },
+    include: {
+      progress: {
+        include: {
+          unitProgress: true
+        }
+      }
+    }
   });
 
   if (!dbUser) {
     redirect("/signin");
   }
 
-  const completedUnits: CompletedUnits = (dbUser.completedUnits as CompletedUnits) || {};
+  const completedUnits: CompletedUnits = dbUser.progress?.unitProgress.reduce((acc, progress) => {
+    if (progress.questionsCompleted && progress.videoCompleted) {
+      if (!acc[progress.chapterId]) {
+        acc[progress.chapterId] = [];
+      }
+      acc[progress.chapterId].push(progress.unitId);
+    }
+    return acc;
+  }, {} as CompletedUnits) || {};
   
   // Determine current semester - default to 1 if not specified
   const currentSemester = params.semesterId ? parseInt(params.semesterId.replace('semester-', ''), 10) : 1;
@@ -50,7 +65,7 @@ export default async function CourseLayout({
   const semesterTitle = semester?.title?.split(': ')[1] || 'Course';
 
   return (
-    <div className="relative min-h-screen w-full bg-black">
+    <div className="relative min-h-screen w-full bg-black overflow-hidden">
       {/* Background Image */}
       <div 
         className="fixed inset-0 w-full h-full animated-bg"
@@ -81,7 +96,7 @@ export default async function CourseLayout({
       </div>
 
       {/* Main Content */}
-      <main className="relative min-h-screen w-full">
+      <main className="fixed pl-10 sm:pl-20 lg:pl-28 overflow-y-auto">
         {children}
       </main>
     </div>

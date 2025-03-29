@@ -31,7 +31,7 @@ export default function LogoSection({ completedUnits }: LogoSectionProps) {
       </Link>
 
       <div className="fixed left-12 sm:left-20 top-2 sm:top-3 flex flex-col items-start font-morion opacity-100 z-50">
-        <div className="h-[3vh] sm:h-auto">
+        <div className="h-[5vh] sm:h-auto">
           <img 
             src="/EvermodeTypeLogo.svg" 
             alt="Evermode" 
