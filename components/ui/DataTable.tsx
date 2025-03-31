@@ -97,7 +97,7 @@ export function DataTable({ data }: DataTableProps) {
       <div className="rounded-lg overflow-hidden border border-gray-800">
         <Table>
           <TableCaption>Course progress for all students in your group</TableCaption>
-          <TableHeader className="bg-gray-900">
+          <TableHeader className="bg-zinc-800">
             <TableRow>
               <TableHead 
                 className="text-white cursor-pointer hover:text-secondary transition-colors"

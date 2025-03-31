@@ -109,21 +109,45 @@ export default async function AchievementsPage({ params }: {
     : 0;
   
   return (
-    <div className="p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-4xl mx-auto my-8 overflow-y-auto">
+    <div className="p-8 backdrop-blur-sm w-screen h-screen rounded-lg max-w-4xlmy-8 overflow-y-auto">
       {/* User Info Section */}
-      <div className="flex items-center gap-6 mb-8">
-        <div className="bg-secondary/20 w-20 h-20 rounded-full flex items-center justify-center border border-secondary/30">
-          <span className="text-secondary text-2xl font-morion">
+      <div className="flex py-10 items-center gap-6 mb-8">
+        <div className="bg-secondary/20 w-20 h-20 rounded-full flex items-center justify-center border border-zinc-600">
+          <span className="text-secondary text-3xl font-morion">
             {dbUser.firstName?.[0]}{dbUser.lastName?.[0]}
           </span>
         </div>
         <div>
-          <h1 className="text-4xl font-morion text-white">{dbUser.firstName} {dbUser.lastName}</h1>
-          <p className="text-white/60 mt-1">Semester {currentSemester} Student</p>
+          <h1 className="text-2xl font-morion  text-white">{dbUser.firstName} {dbUser.lastName}</h1>
+          <p className="text-white/60 font-morion-light mt-1">Semester {currentSemester} Student</p>
         </div>
       </div>
       
-      <div className="grid gap-6">
+      <div className="grid gap-6 font-morion-medium">
+
+        {/* Achievements */}
+        <div className="bg-white/5 p-6 rounded-lg border border-white/10">
+          <h2 className="text-xl text-white mb-4">Achievements</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`p-4 rounded-lg border ${totalCompleted >= 1 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
+              <h3 className="text-white font-semibold">First Step</h3>
+              <p className="text-white/60 text-sm">Complete your first unit</p>
+            </div>
+            <div className={`p-4 rounded-lg border ${totalCompleted >= 5 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
+              <h3 className="text-white font-semibold">Getting Started</h3>
+              <p className="text-white/60 text-sm">Complete 5 units</p>
+            </div>
+            <div className={`p-4 rounded-lg border ${totalCompleted >= 10 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
+              <h3 className="text-white font-semibold">On a Roll</h3>
+              <p className="text-white/60 text-sm">Complete 10 units</p>
+            </div>
+            <div className={`p-4 rounded-lg border ${totalCompleted >= 20 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
+              <h3 className="text-white font-semibold">Dedicated Learner</h3>
+              <p className="text-white/60 text-sm">Complete 20 units</p>
+            </div>
+          </div>
+        </div>
+
         {/* Progress Overview */}
         <div className="bg-white/5 p-6 rounded-lg border border-white/10">
           <h2 className="text-xl text-white mb-4">Progress Overview</h2>
@@ -191,28 +215,7 @@ export default async function AchievementsPage({ params }: {
           </div>
         </div>
         
-        {/* Achievements */}
-        <div className="bg-white/5 p-6 rounded-lg border border-white/10">
-          <h2 className="text-xl text-white mb-4">Achievements</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 1 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">First Step</h3>
-              <p className="text-white/60 text-sm">Complete your first unit</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 5 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">Getting Started</h3>
-              <p className="text-white/60 text-sm">Complete 5 units</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 10 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">On a Roll</h3>
-              <p className="text-white/60 text-sm">Complete 10 units</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 20 ? 'bg-secondary/20 border-secondary' : 'bg-white/5 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">Dedicated Learner</h3>
-              <p className="text-white/60 text-sm">Complete 20 units</p>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

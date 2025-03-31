@@ -55,7 +55,7 @@ export default function SemesterPage({ params }: PageProps) {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-black">
+      <div className="min-h-screen w-full flex items-center justify-center">
         <div className="text-white font-morion">Loading...</div>
       </div>
     );

@@ -6,6 +6,13 @@ import { useRouter, usePathname, useParams } from "next/navigation";
 import courseData from "@/app/_components/(semester1)/courseData";
 import { useEffect, useState } from "react";
 
+interface Unit {
+  questions?: { length: number }[];
+  quiz?: boolean | object;
+  video?: { questions?: { length: number }[] };
+  type?: string;
+}
+
 export default function LearnLayout({
   children
 }: {
@@ -50,7 +57,7 @@ export default function LearnLayout({
   }, [section]);
 
   // Improved unit type detection
-  const determineUnitType = (unit) => {
+  const determineUnitType = (unit: Unit) => {
     // First check for question/quiz content
     if (unit.questions && unit.questions.length > 0) {
       return 'quiz';
@@ -164,17 +171,6 @@ export default function LearnLayout({
   // Connect to your existing scroll or button handlers
   const handleScrollUp = () => handleNavigation('prev');
   const handleScrollDown = () => handleNavigation('next');
-  
-  // Update your handleIndicatorPosition function
-  const handleIndicatorPosition = (position) => {
-    // Existing threshold code...
-    
-    if (position > upperThreshold) {
-      handleNavigation('next');
-    } else if (position < lowerThreshold) {
-      handleNavigation('prev');
-    }
-  };
 
   return (
     <div className="relative min-h-screen">

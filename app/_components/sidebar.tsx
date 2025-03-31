@@ -183,7 +183,7 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
               setIsAnimating(false);
             }, 800);
           }}
-          className="block relative w-full flex-1 overflow-hidden group transition-all duration-500 hover:scale-[1.02] tile-animate"
+          className="block relative w-full flex-1 overflow-hidden group transition-all duration-500 hover:scale-[1.02] tile-animate bg-gradient-to-b from-black/90 to-black/10"
           style={{ 
             animationDelay: !isAnimating ? `${index * 100}ms` : '0ms'
           }}
@@ -209,18 +209,18 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.2)_100%)]" />
 
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-6">
-            <h3 className="text-2xl font-neima text-white mb-4 group-hover:text-secondary transition-colors duration-700 ease-out">
+          <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-2 sm:p-6">
+            <h3 className="text-xl sm:text-2xl font-neima text-white sm:mb-4 mb-2 group-hover:text-secondary transition-colors duration-700 ease-out">
               {chapter.title.replace(/^Chapter \d+:\s*/, '')}
             </h3>
             
             {/* Progress and Units count */}
             <div className="flex flex-col items-center gap-2">
-              <span className="text-secondary font-morion text-lg">
+              <span className="text-secondary font-morion text-sm sm:text-lg">
                 {progressPercentage}%
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-white/50 font-morion text-sm">
+                <span className="text-white/50 font-morion text-xs">
                   {chapter.units.length} Units
                 </span>
                 <span className="text-secondary group-hover:translate-x-2 transition-transform duration-700 ease-out">
@@ -283,11 +283,11 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
       `}</style>
 
       {/* Fixed sidebar that always stays on top */}
-      <div className="fixed bottom-0 left-5 h-fit min-w-28 flex flex-col justify-end p-5 gap-y-6 z-50">
+      <div className="fixed top-16 sm:top-[90vh] left-4 sm:bottom-0 sm:left-5 md:bottom-5 md:left-10 h-fit w-10 sm:min-w-28 flex flex-col justify-end sm:p-5 gap-y-6 z-50">
         <div onClick={toggleMenu} className="relative z-50">
           <CustomLink 
             href="#" 
-            fontSize="text-xl" 
+            fontSize="text-xs sm:text-xl" 
             fontFamily="font-morion"
             arrowSize={24}
             className={`uppercase tracking-wider ${isMenuOpen ? 'text-secondary' : ''}`}
@@ -304,7 +304,7 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
           aria-hidden={!isMenuOpen}
         >
           <div className={`h-screen flex flex-col ${isMenuOpen && !isAnimating ? 'menu-open' : ''}`}>
-            <div className="p-0 h-full">
+            <div className="pt-28 sm:pt-0 h-full">
               {/* Show loading indicator if still loading */}
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">

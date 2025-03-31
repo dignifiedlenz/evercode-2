@@ -12,14 +12,30 @@ import Image from "next/image";
 import { resetUserProgress } from "@/lib/progress-service"; // Import the reset function
 import { toast } from "react-hot-toast"; // You might need to install this package if not already installed
 
+interface CustomUser {
+    id: string;
+    email: string | null;
+    name: string | null;
+    role?: string;
+}
+
+interface CustomSession {
+    user: CustomUser;
+    expires: string;
+}
+
 const UserMenu: React.FC = () => {
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: CustomSession | null };
     const [isResetting, setIsResetting] = useState(false);
 
     // Hardcoded menu items
     const menuItems = [
         { label: "Update Profile", href: "/profile" },
-        { label: "Support", href: "/profile" }
+        { label: "Support", href: "/profile" },
+        // Add admin dashboard link conditionally
+        ...(session?.user?.role === "admin" ? [
+            { label: "Admin Dashboard", href: "/course/adminDashboard" }
+        ] : [])
     ];
 
     if (!session) {

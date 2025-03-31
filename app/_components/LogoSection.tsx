@@ -4,8 +4,6 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { Logo } from "./_media/logo";
 import SemesterSelector from "./SemesterSelector";
-import Sidebar from "./sidebar";
-import courseData from "./(semester1)/courseData";
 import { CompletedUnits } from "@/types/course";
 
 interface LogoSectionProps {
@@ -44,13 +42,6 @@ export default function LogoSection({ completedUnits }: LogoSectionProps) {
         />
       </div>
 
-      <div className="fixed z-40 bg-gradient-to-r from-black/80 to-transparent">
-        <Sidebar 
-          courseData={courseData} 
-          currentSemester={currentSemester} 
-          completedUnits={completedUnits} 
-        />
-      </div>
     </>
   );
 } 

@@ -5,9 +5,7 @@ import { prisma } from "@/lib/prisma";
 import UserMenu from "../_components/UserMenu";
 import { redirect } from "next/navigation";
 import LogoSection from "@/app/_components/LogoSection";
-import Sidebar from "@/app/_components/sidebar";
 import courseData from "@/app/_components/(semester1)/courseData";
-import SemesterSelector from "@/app/_components/SemesterSelector";
 
 // Define the type for CompletedUnits if not already defined
 interface CompletedUnits {
@@ -65,7 +63,7 @@ export default async function CourseLayout({
   const semesterTitle = semester?.title?.split(': ')[1] || 'Course';
 
   return (
-    <div className="relative min-h-screen w-full bg-black overflow-hidden">
+    <div className="relative min-h-screen w-full bg-black">
       {/* Background Image */}
       <div 
         className="fixed inset-0 w-full h-full animated-bg"
@@ -77,15 +75,6 @@ export default async function CourseLayout({
           filter: 'brightness(var(--background-brightness))'
         }}
       />
-      
-      {/* Sidebar with curriculum tiles */}
-      <div className="fixed left-0 top-0 h-full z-40 bg-gradient-to-r from-black/80 to-transparent">
-        <Sidebar 
-          courseData={courseData} 
-          currentSemester={currentSemester} 
-          completedUnits={completedUnits} 
-        />
-      </div>
 
       {/* Logo Section */}
       <LogoSection completedUnits={completedUnits} />
@@ -96,7 +85,7 @@ export default async function CourseLayout({
       </div>
 
       {/* Main Content */}
-      <main className="fixed pl-10 sm:pl-20 lg:pl-28 overflow-y-auto">
+      <main className="relative min-h-screen w-full">
         {children}
       </main>
     </div>

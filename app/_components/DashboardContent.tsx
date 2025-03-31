@@ -332,163 +332,184 @@ export default function DashboardContent({
   }, [nextIncompleteUnit, isLoading, isNavigating, progressData, router]);
 
   return (
-    <div className="pt-24 sm:pt-0 flex flex-col min-h-screen w-full text-white overflow-y-auto">
-      <div
-        className="min-h-screen bg-cover bg-center transition-all duration-1000"
+    <div className="relative min-h-screen w-screen bg-black/65">
+      {/* Background Image */}
+      <div 
+        className="fixed inset-0 w-full h-full"
         style={{
-          backgroundImage: `url(${backgroundImage})`
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          width: '100vw',
+          height: '100vh',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1
         }}
-      >
-        <h2 className="fixed left-1/2 top-5 -translate-x-1/2 text-center text-sm sm:text-base md:text-lg lg:text-xl text-zinc-400 font-morion tracking-wider">{semesterTitle}</h2>
-        
-        {/* Overlay for better text readability */}
-        <div className="min-h-screen bg-black bg-opacity-80 flex flex-col lg:flex-row">
-          {/* Main Content */}
-          <div className="flex flex-col lg:flex-row w-full">
-            {/* Left Content Section */}
-            <div className="w-full py-6 lg:w-2/3 flex flex-col justify-center px-6 sm:px-8 lg:py-0">
-              <h1 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
-                Welcome Back {firstName || 'User'}!
-              </h1>
-              <div className="w-full sm:w-3/4 md:w-1/2">
-                <p className="text-xs font-morion sm:text-sm md:text-base mb-2">Your Progress</p>
-                <div className="w-full bg-zinc-800 h-1.5 sm:h-2">
-                  <div
-                    className="bg-white h-1.5 sm:h-2"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </div>
+      />
 
-              {/* Resume Course Button */}
-              <div className="mt-6 font-morion mb-4">
-                <button
-                  onClick={navigateToNextUnit}
-                  disabled={!nextIncompleteUnit || isLoading || isNavigating}
-                  className={`w-full sm:w-auto px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
-                    ${!nextIncompleteUnit || isLoading || isNavigating 
-                      ? 'bg-zinc-700 cursor-not-allowed text-zinc-400' 
-                      : 'bg-secondary hover:bg-opacity-80 text-black'}`}
-                >
-                  {isLoading 
-                    ? 'Loading...' 
-                    : isNavigating 
-                      ? 'Navigating...' 
-                      : nextIncompleteUnit 
-                        ? 'Resume Course' 
-                        : 'All Units Completed'}
-                  {nextUnitInfo && !isLoading && !isNavigating && (
-                    <span className="block text-xs mt-1 opacity-80">
-                      {`${nextUnitInfo.chapterTitle}: ${nextUnitInfo.unitTitle}`}
-                    </span>
-                  )}
-                </button>
-              </div>
+      {/* Content */}
+      <div className="relative z-10">
+        <div className="sm:pt-0 flex flex-col min-h-screen w-full text-white overflow-y-auto">
+          <div
+            className="min-h-screen min-w-screen sm:bg-cover bg-center transition-all duration-1000"
+          >
+            <h2 className="fixed left-1/2 hidden sm:block top-5 -translate-x-1/2 text-center text-sm sm:text-base md:text-lg lg:text-xl text-zinc-400 font-morion tracking-wider">{semesterTitle}</h2>
+            
+            {/* Updated overlay with gradient and better opacity */}
+            <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-b from-black/80 to-black/50"> 
+              {/* Main Content */}
+              <div className="flex flex-col lg:flex-row w-full">
+                {/* Left Content Section */}
+                <div className="w-full pt-28 sm:pt-0 px-4 py-6 sm:pl-24 lg:w-2/3 flex flex-col justify-center sm:px-8 lg:py-0">
+                  <h1 className="text-5xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
+                    Welcome Back {firstName || 'User'}!
+                  </h1>
+                  <div className="w-full sm:w-3/4 md:w-1/2">
+                    <p className="text-xs font-morion sm:text-sm md:text-base mb-2">Your Progress</p>
+                    <div className="w-full bg-zinc-800 h-1.5 sm:h-2">
+                      <div
+                        className="bg-white h-1.5 sm:h-2"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
 
-
-              {/* Teachers Section */}
-              <div className="w-full sm:w-3/4 md:w-1/2">
-                <p className="font-morion text-xs sm:text-sm md:text-base mb-4">Your Instructors for this semester</p>
-                <div className="flex items-center gap-4 sm:gap-6">
-                  {instructors.map((instructor, index) => (
-                    <button 
-                      key={instructor.id} 
-                      className="relative group focus:outline-none"
-                      onClick={() => setSelectedInstructor(index + 1)}
+                  {/* Resume Course Button */}
+                  <div className="mt-6 font-morion mb-4">
+                    <button
+                      onClick={navigateToNextUnit}
+                      disabled={!nextIncompleteUnit || isLoading || isNavigating}
+                      className={`w-full sm:w-auto px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
+                        ${!nextIncompleteUnit || isLoading || isNavigating 
+                          ? 'bg-zinc-700 cursor-not-allowed text-zinc-400' 
+                          : 'bg-secondary hover:bg-opacity-80 text-black'}`}
                     >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-secondary/30 group-hover:border-secondary transition-colors duration-300">
-                        <img 
-                          src={instructor.profileImage} 
-                          alt={instructor.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <p className="text-xs sm:text-sm text-white/80 whitespace-nowrap">{instructor.name}</p>
-                      </div>
+                      {isLoading 
+                        ? 'Loading...' 
+                        : isNavigating 
+                          ? 'Navigating...' 
+                          : nextIncompleteUnit 
+                            ? 'Resume Course' 
+                            : 'All Units Completed'}
+                      {nextUnitInfo && !isLoading && !isNavigating && (
+                        <span className="block text-xs mt-1 opacity-80">
+                          {`${nextUnitInfo.chapterTitle}: ${nextUnitInfo.unitTitle}`}
+                        </span>
+                      )}
                     </button>
-                  ))}
+                  </div>
+
+
+                  {/* Teachers Section */}
+                  <div className="w-full sm:w-3/4 md:w-1/2">
+                    <p className="font-morion text-xs sm:text-sm md:text-base mb-4">Your Instructors for this semester</p>
+                    <div className="flex items-center gap-4 sm:gap-6">
+                      {instructors.map((instructor, index) => (
+                        <button 
+                          key={instructor.id} 
+                          className="relative group focus:outline-none"
+                          onClick={() => setSelectedInstructor(index + 1)}
+                        >
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-secondary/30 group-hover:border-secondary transition-colors duration-300">
+                            <img 
+                              src={instructor.profileImage} 
+                              alt={instructor.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <p className="text-xs sm:text-sm text-white/80 whitespace-nowrap">{instructor.name}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Sidebar Section */}
+                <div className="w-full lg:w-1/3 flex flex-col lg:flex-row items-center justify-center py-8 lg:py-0">
+                  <aside className="flex p-5 justify-center w-full">
+                    <nav className="w-full max-w-sm">
+                      <ul className="space-y-3 sm:space-y-4 p-5 bg-black/40 backdrop-blur-md font-morion text-xs sm:text-sm md:text-base lg:text-lg rounded-sm border border-white/10">
+                        {([
+                          { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
+                          {
+                            text: isLoading 
+                              ? 'Loading next unit...'
+                              : isNavigating
+                                ? 'Navigating...'
+                                : nextIncompleteUnit 
+                                  ? `Resume Course` 
+                                  : 'All Units Completed!', 
+                            href: '#', 
+                            onClick: nextIncompleteUnit && !isLoading && !isNavigating ? navigateToNextUnit : undefined,
+                            disabled: !nextIncompleteUnit || isLoading || isNavigating,
+                            className: nextIncompleteUnit && !isLoading && !isNavigating ? 'text-primary hover:text-primary-light font-bold' : 'opacity-70'
+                          },
+                          { text: 'Contact Support', href: `/course/semester-${currentSemester}/support` },
+                          { text: 'Meet Your Instructors', href: `/course/semester-${currentSemester}/instructors` },
+                          { text: 'View Notes', href: `/course/semester-${currentSemester}/notes` }
+                        ] as NavLink[]).map((link, index) => (
+                          <li key={index}>
+                            {link.onClick ? (
+                              <div className="flex flex-col">
+                                <div 
+                                  onClick={link.disabled ? undefined : link.onClick} 
+                                  className={`cursor-pointer ${link.disabled ? 'opacity-50' : ''} ${link.className || ''}`}
+                                >
+                                  <CustomLink href={link.href}>{link.text}</CustomLink>
+                                </div>
+                                {index === 1 && nextUnitInfo && !isLoading && !isNavigating && (
+                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
+                                    {`${nextUnitInfo.chapterTitle}: ${nextUnitInfo.unitTitle}`}
+                                  </span>
+                                )}
+                                {index === 1 && isLoading && (
+                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
+                                    Finding your next unit...
+                                  </span>
+                                )}
+                                {index === 1 && isNavigating && (
+                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
+                                    Taking you to your next unit...
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <CustomLink href={link.href}>{link.text}</CustomLink>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+                  </aside>
                 </div>
               </div>
-            </div>
-
-            {/* Right Sidebar Section */}
-            <div className="w-full lg:w-1/3 flex flex-col lg:flex-row items-center justify-center py-8 lg:py-0">
-              <aside className="flex p-5 justify-center w-full">
-                <nav className="w-full max-w-sm">
-                  <ul className="space-y-3 sm:space-y-4 p-5 bg-black/50 backdrop-blur-lg font-morion text-xs sm:text-sm md:text-base lg:text-lg rounded-sm">
-                    {([
-                      { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
-                      { 
-                        text: isLoading 
-                          ? 'Loading next unit...'
-                          : isNavigating
-                            ? 'Navigating...'
-                            : nextIncompleteUnit 
-                              ? `Resume Course` 
-                              : 'All Units Completed!', 
-                        href: '#', 
-                        onClick: nextIncompleteUnit && !isLoading && !isNavigating ? navigateToNextUnit : undefined,
-                        disabled: !nextIncompleteUnit || isLoading || isNavigating,
-                        className: nextIncompleteUnit && !isLoading && !isNavigating ? 'text-primary hover:text-primary-light font-bold' : 'opacity-70'
-                      },
-                      { text: 'Contact Support', href: `/course/semester-${currentSemester}/support` },
-                      { text: 'Meet Your Instructors', href: `/course/semester-${currentSemester}/instructors` },
-                      { text: 'View Notes', href: `/course/semester-${currentSemester}/notes` }
-                    ] as NavLink[]).map((link, index) => (
-                      <li key={index}>
-                        {link.onClick ? (
-                          <div className="flex flex-col">
-                            <div 
-                              onClick={link.disabled ? undefined : link.onClick} 
-                              className={`cursor-pointer ${link.disabled ? 'opacity-50' : ''} ${link.className || ''}`}
-                            >
-                              <CustomLink href={link.href}>{link.text}</CustomLink>
-                            </div>
-                            {index === 1 && nextUnitInfo && !isLoading && !isNavigating && (
-                              <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                {`${nextUnitInfo.chapterTitle}: ${nextUnitInfo.unitTitle}`}
-                              </span>
-                            )}
-                            {index === 1 && isLoading && (
-                              <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                Finding your next unit...
-                              </span>
-                            )}
-                            {index === 1 && isNavigating && (
-                              <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                Taking you to your next unit...
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <CustomLink href={link.href}>{link.text}</CustomLink>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              </aside>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Instructor Lightbox */}
-      <InstructorLightbox
-        isOpen={!!selectedInstructor}
-        onClose={() => setSelectedInstructor(null)}
-        instructorId={selectedInstructor || 0}
-        semesterId={currentSemester}
-      />
-      
-      {/* Sidebar with curriculum tiles - Now will display correct progress */}
-      <div className="fixed z-40 bg-gradient-to-r from-black/80 to-transparent">
-        <Sidebar 
-          courseData={courseData}
-          currentSemester={currentSemester}
-          completedUnits={completedUnits}
-        />
+          {/* Instructor Lightbox */}
+          <InstructorLightbox
+            isOpen={!!selectedInstructor}
+            onClose={() => setSelectedInstructor(null)}
+            instructorId={selectedInstructor || 0}
+            semesterId={currentSemester}
+          />
+          
+          {/* Sidebar with curriculum tiles - Now will display correct progress */}
+          <div className="fixed z-40 bg-gradient-to-r from-black/50 to-transparent">
+            <Sidebar 
+              courseData={courseData}
+              currentSemester={currentSemester}
+              completedUnits={completedUnits}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

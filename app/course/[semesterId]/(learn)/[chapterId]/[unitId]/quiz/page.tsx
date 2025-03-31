@@ -190,7 +190,7 @@ export default function QuizPage() {
       </div>
 
       {/* Main Content */}
-      <main className="pt-40 sm:px-8 sm:max-w-[60vw] font-morion relative z-50">
+      <main className="pt-40 sm:px-8 md:px-48 max-w-[60vw] sm:max-w-full font-morion relative z-50">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
