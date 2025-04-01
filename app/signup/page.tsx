@@ -2,6 +2,7 @@
 import { AuthLogo } from "../_components/_media/authLogo";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Suspense } from "react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -42,6 +43,7 @@ export default function SignupPage() {
   };
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-morion">
       <div
         className="
@@ -125,5 +127,6 @@ export default function SignupPage() {
         )}
       </div>
     </div>
+    </Suspense>
   );
 }

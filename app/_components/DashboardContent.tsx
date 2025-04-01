@@ -332,26 +332,7 @@ export default function DashboardContent({
   }, [nextIncompleteUnit, isLoading, isNavigating, progressData, router]);
 
   return (
-    <div className="relative min-h-screen w-screen bg-black/65">
-      {/* Background Image */}
-      <div 
-        className="fixed inset-0 w-full h-full"
-        style={{
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          width: '100vw',
-          height: '100vh',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1
-        }}
-      />
-
+    <div className="relative min-h-screen w-screen">
       {/* Content */}
       <div className="relative z-10">
         <div className="sm:pt-0 flex flex-col min-h-screen w-full text-white overflow-y-auto">
@@ -361,12 +342,12 @@ export default function DashboardContent({
             <h2 className="fixed left-1/2 hidden sm:block top-5 -translate-x-1/2 text-center text-sm sm:text-base md:text-lg lg:text-xl text-zinc-400 font-morion tracking-wider">{semesterTitle}</h2>
             
             {/* Updated overlay with gradient and better opacity */}
-            <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-b from-black/80 to-black/50"> 
+            <div className="min-h-screen flex flex-col lg:flex-row"> 
               {/* Main Content */}
               <div className="flex flex-col lg:flex-row w-full">
                 {/* Left Content Section */}
-                <div className="w-full pt-28 sm:pt-0 px-4 py-6 sm:pl-24 lg:w-2/3 flex flex-col justify-center sm:px-8 lg:py-0">
-                  <h1 className="text-5xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
+                <div className="w-full space-y-10 sm:space-y-0 pt-28 sm:pt-0 px-4 py-6 sm:pl-24 lg:w-2/3 flex flex-col justify-center sm:px-8 lg:py-0">
+                  <h1 className="text-5xl pt-16 sm:pt-0 sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
                     Welcome Back {firstName || 'User'}!
                   </h1>
                   <div className="w-full sm:w-3/4 md:w-1/2">
