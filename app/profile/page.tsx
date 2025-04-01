@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Suspense } from "react"; 
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -104,7 +105,7 @@ export default function ProfilePage() {
   }
 
   return (
-
+    <Suspense fallback={<div>Loading...</div>}>
 
     <div className="flex flex-col items-center justify-center min-h-screen text-black">
 
@@ -175,5 +176,6 @@ export default function ProfilePage() {
       {errorMsg && <p className="mt-2 text-red-800">{errorMsg}</p>}
       {successMsg && <p className="mt-2 text-secondary">{successMsg}</p>}
     </div>
+    </Suspense>
   );
 }

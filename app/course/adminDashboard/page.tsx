@@ -5,7 +5,6 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { DataTable } from "@/components/ui/DataTable";
-import courseData from "../../_components/(semester1)/courseData";
 import { Metadata } from "next";
 import { ColumnDef } from "@tanstack/react-table";
 
@@ -110,19 +109,11 @@ export default async function AdminDashboard() {
     };
   });
 
-  const totalStudents = usersWithProgress.length;
-  const activeStudents = usersWithProgress.filter(user => Object.keys(user.completedUnits).length > 0).length;
-  const avgProgress = Math.round(
-    usersWithProgress.reduce((acc, user) => {
-      const totalUnits = Object.values(user.completedUnits).flat().length;
-      return acc + totalUnits;
-    }, 0) / totalStudents
-  );
-
   // Format user data for the DataTable
   const userData = usersWithProgress.map((user) => {
     const totalUnits = Object.values(user.completedUnits).flat().length;
-    const progress = Math.round((totalUnits / 20) * 100);
+    // Use a fixed calculation to ensure consistency
+    const progress = Math.floor((totalUnits / 20) * 100);
     
     return {
       name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unnamed Student',
@@ -130,6 +121,16 @@ export default async function AdminDashboard() {
       progress
     };
   });
+
+  // Calculate stats with consistent rounding
+  const totalStudents = usersWithProgress.length;
+  const activeStudents = usersWithProgress.filter(user => Object.keys(user.completedUnits).length > 0).length;
+  const avgProgress = Math.floor(
+    usersWithProgress.reduce((acc, user) => {
+      const totalUnits = Object.values(user.completedUnits).flat().length;
+      return acc + totalUnits;
+    }, 0) / totalStudents
+  );
 
   return (
     <div className="relative min-h-screen text-white font-morion w-full">
@@ -166,7 +167,7 @@ export default async function AdminDashboard() {
           <div className="bg-black/40 border border-gray-800 rounded-xl p-6 backdrop-blur-sm">
             <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-1 font-morion">Active Students</h3>
             <p className="text-3xl font-bold text-white font-neima">
-              {activeStudents} <span className="text-gray-200 text-sm font-morion">({Math.round(activeStudents/totalStudents*100)}%)</span>
+              {activeStudents} <span className="text-gray-200 text-sm font-morion">({Math.floor(activeStudents/totalStudents*100)}%)</span>
             </p>
           </div>
         </div>

@@ -1,18 +1,20 @@
 "use client";
 
 import { AuthLogo } from "../_components/_media/authLogo";
-import React, { useState } from "react";
+import React from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { Suspense } from "react";
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [errorMsg, setErrorMsg] = React.useState("");
 
   const callbackUrl = searchParams.get("callbackUrl") || "/course";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,7 +23,7 @@ export default function SignInPage() {
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: false, // We'll manually redirect
+      redirect: false,
       callbackUrl,
     });
 
@@ -33,32 +35,8 @@ export default function SignInPage() {
   }
 
   return (
-
-    
-    <div className=" w-full flex flex-col items-center justify-center h-screen text-black font-morion">
-      <div
-        className="
-          w-[120vw]
-          h-[120vh]
-          absolute
-          inset-0
-          bg-cover
-          bg-center
-          pointer-events-none
-          transition-all
-          duration-100
-          -z-10
-        "
-        style={{
-          backgroundImage: `url('/516038ldsdl.jpg')`,
-        }}
-      />
-      <div className="absolute inset-0 bg-black/50 -z-10"></div>
-      <div>
-        <AuthLogo/>
-      </div>
-      <h1 className="my-4 text-5xl text-white font-custom1">Sign In</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 pt-10 w-64">
+    <>
+      <form onSubmit={handleSubmit} className="relative z-10 flex flex-col space-y-3 pt-10 w-64">
         <input
           type="text"
           placeholder="Email"
@@ -84,16 +62,45 @@ export default function SignInPage() {
       </form>
 
       {errorMsg && (
-        <p className="text-red-500 mt-3">{errorMsg}</p>
+        <p className="relative z-10 text-red-500 mt-3">{errorMsg}</p>
       )}
 
-      {/* Sign Up Button */}
       <button
         onClick={() => router.push("/signup")}
-        className="mt-6 text-white px-4 py-2 rounded hover:bg-white hover:text-black hover:px-7 transition-all"
+        className="relative z-10 mt-6 text-white px-4 py-2 rounded hover:bg-white hover:text-black hover:px-7 transition-all"
       >
         sign up instead  →
       </button>
+    </>
+  );
+}
+
+export default function SignInClient() {
+  return (
+    <div className="relative w-full flex flex-col items-center justify-center h-screen text-black font-morion overflow-hidden">
+      <div className="absolute inset-0 -z-20">
+        <Image
+          src="/503698ldsdl.jpg"
+          alt="Background"
+          fill
+          priority
+          className="object-cover"
+          quality={100}
+        />
+      </div>
+      <div 
+        className="absolute inset-0 -z-10"
+        style={{
+          background: 'radial-gradient(circle at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.85) 100%)'
+        }}
+      />
+      <div className="relative z-10">
+        <AuthLogo/>
+      </div>
+      <h1 className="relative z-10 my-4 text-5xl text-white font-custom1">Sign In</h1>
+      <Suspense fallback={<div className="relative z-10 text-white">Loading form...</div>}>
+        <SignInForm />
+      </Suspense>
     </div>
   );
 }
