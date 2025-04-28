@@ -1,137 +1,162 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { prisma } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Helper function to verify admin privileges
+async function verifyAdmin(supabase: any) {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error || !session) {
+      console.log('No session found in admin groups API')
+      return { authorized: false, error: 'Unauthorized' }
+    }
+    
+    // Look up user to check role
+    const user = await prisma.user.findUnique({
+      where: { auth_id: session.user.id },
+      select: { role: true }
+    })
+    
+    if (!user) {
+      return { authorized: false, error: 'User not found' }
+    }
+    
+    // Check if user is an admin
+    if (
+      user.role !== UserRole.ROOT_ADMIN && 
+      user.role !== UserRole.SUPER_ADMIN && 
+      user.role !== UserRole.REGIONAL_ADMIN && 
+      user.role !== UserRole.LOCAL_ADMIN
+    ) {
+      return { authorized: false, error: 'Insufficient permissions' }
+    }
+    
+    return { authorized: true, session, user }
+  } catch (error) {
+    console.error('Auth verification error:', error)
+    return { authorized: false, error: 'Authentication error' }
+  }
+}
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    console.log('Admin Groups API: GET request received')
+    
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    
+    const { authorized, error, user } = await verifyAdmin(supabase)
+    if (!authorized) {
+      return NextResponse.json({ error }, { status: 401 })
     }
-
-    // Fetch all groups with their users and progress statistics
+    
+    // Get all groups with their regions and dioceses
     const groups = await prisma.group.findMany({
       include: {
+        region: {
+          select: {
+            id: true,
+            name: true,
+            dioceseId: true,
+            diocese: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
         users: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
-            role: true,
-            progress: {
-              select: {
-                unitProgress: true,
-              },
-            },
-          },
+            email: true,
+            role: true
+          }
         },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
       },
       orderBy: {
-        name: "asc",
-      },
-    });
-
-    // Calculate statistics for each group
-    const groupsWithStats = groups.map(group => {
-      const totalUsers = group.users.length;
-      const usersWithProgress = group.users.filter(user => user.progress?.unitProgress?.length > 0).length;
-      const averageProgress = totalUsers > 0 
-        ? group.users.reduce((acc, user) => {
-            const progress = user.progress?.unitProgress || [];
-            return acc + (progress.length / 20); // Assuming 20 total units
-          }, 0) / totalUsers
-        : 0;
-
-      return {
-        ...group,
-        statistics: {
-          totalUsers,
-          usersWithProgress,
-          averageProgress: Math.round(averageProgress * 100),
-        },
-      };
-    });
-
-    return NextResponse.json(groupsWithStats);
+        name: 'asc'
+      }
+    })
+    
+    console.log('Admin Groups API: Fetched groups:', groups.length)
+    
+    return NextResponse.json(groups)
   } catch (error) {
-    console.error("Error fetching groups:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('Error fetching groups:', error)
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    console.log('Admin Groups API: POST request received')
+    
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    
+    const { authorized, error } = await verifyAdmin(supabase)
+    if (!authorized) {
+      return NextResponse.json({ error }, { status: 401 })
     }
-
-    const { name } = await request.json();
-
-    if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
+    
+    // Parse request body
+    const body = await request.json()
+    const { name, regionId, address } = body
+    
+    if (!name || !regionId) {
+      return NextResponse.json({ error: 'Group name and region ID are required' }, { status: 400 })
     }
-
+    
+    // Check if region exists
+    const region = await prisma.region.findUnique({
+      where: { id: regionId }
+    })
+    
+    if (!region) {
+      return NextResponse.json({ error: 'Region not found' }, { status: 404 })
+    }
+    
+    // Create group with required fields
     const group = await prisma.group.create({
       data: {
         name,
-      },
-      include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(group);
+        address: address || '', // Use empty string as default if address not provided
+        region: {
+          connect: {
+            id: regionId
+          }
+        }
+      }
+    })
+    
+    console.log('Admin Groups API: Created group:', group)
+    
+    return NextResponse.json(group)
   } catch (error) {
-    console.error("Error creating group:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const groupId = searchParams.get("groupId");
-
-    if (!groupId) {
-      return new NextResponse("Group ID is required", { status: 400 });
-    }
-
-    // First, update all users in the group to remove their group association
-    await prisma.user.updateMany({
-      where: {
-        groupId,
-      },
-      data: {
-        groupId: null,
-      },
-    });
-
-    // Then delete the group
-    await prisma.group.delete({
-      where: {
-        id: groupId,
-      },
-    });
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    console.error("Error deleting group:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('Error creating group:', error)
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 

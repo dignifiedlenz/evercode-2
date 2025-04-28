@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { use } from "react";
+import { useEffect, useMemo, use } from "react";
 import DashboardContent from "../../_components/DashboardContent";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { CompletedUnits } from "@/types/course";
+import { Semester } from "@/types/course";
 import courseData from "../../_components/(semester1)/courseData";
-import PageTransitionWrapper from "../../_components/PageTransitionWrapper";
 
 interface PageProps {
   params: Promise<{
@@ -17,63 +15,57 @@ interface PageProps {
 
 export default function SemesterPage({ params }: PageProps) {
   const resolvedParams = use(params);
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [progress, setProgress] = useState(0);
-  const [completedUnits, setCompletedUnits] = useState<CompletedUnits>({});
-  const [firstName, setFirstName] = useState("");
 
-  // Extract semester number from the ID (e.g., "semester-1" -> 1)
-  const semesterNumber = parseInt(resolvedParams.semesterId.split("-")[1]);
+  const semesterNumber = useMemo(() => {
+    if (!resolvedParams?.semesterId || typeof resolvedParams.semesterId !== 'string') {
+      console.error('Invalid or missing semesterId in params');
+      return 1; 
+    }
+    return parseInt(resolvedParams.semesterId.split("-")[1]) || 1; 
+  }, [resolvedParams]);
+
+  const currentSemesterData = useMemo(() => {
+    return courseData.find(sem => sem.id === `semester-${semesterNumber}`);
+  }, [semesterNumber]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/signin");
-      return;
+    if (!authLoading && !user) {
+      console.log('SemesterPage: No user found after auth check, redirecting...');
+      router.push("/auth/signin");
     }
+  }, [user, authLoading, router]);
 
-    if (session?.user) {
-      // Set the first name from the session
-      setFirstName(session.user.name?.split(' ')[0] || "");
-
-      // Fetch progress data
-      fetch("/api/progress")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.progress) {
-            setProgress(data.progress);
-          }
-          if (data.completedUnits) {
-            setCompletedUnits(data.completedUnits);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching progress:", error);
-        });
-    }
-  }, [session, status, router]);
-
-  if (status === "loading") {
+  if (authLoading) { 
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-white font-morion">Loading...</div>
+        <div className="text-white font-morion">Loading Authentication...</div> 
       </div>
     );
   }
 
-  if (!session?.user) {
-    return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="text-white font-morion">Redirecting to sign in...</div> 
+      </div>
+    ); 
+  }
+  
+  if (!currentSemesterData) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="text-white font-morion">Error: Semester data not found for ID {resolvedParams?.semesterId}.</div> 
+      </div>
+    );
   }
 
   return (
-    <PageTransitionWrapper>
-      <DashboardContent
-        firstName={firstName}
-        progress={progress}
-        currentSemester={semesterNumber}
-        completedUnits={completedUnits}
-        semesters={courseData}
-      />
-    </PageTransitionWrapper>
+    <DashboardContent
+      firstName={user.firstName || "User"}
+      currentSemester={semesterNumber}
+      semesters={courseData}
+    />
   );
 }

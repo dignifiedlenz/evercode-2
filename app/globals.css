@@ -100,7 +100,7 @@ html {
     @apply border-[hsl(var(--border))];
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-white/60;
   }
 }
 
@@ -267,4 +267,65 @@ div[style*="background-image"].animated-bg > * {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+@keyframes progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress 2.5s linear forwards;
+}
+
+/* Toast styles */
+[data-sonner-toast] {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(4px) !important;
+  padding: 12px 24px !important;
+  padding-bottom: 20px !important;
+  border-radius: 8px !important;
+  color: white !important;
+  font-family: 'Morion', serif !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+[data-sonner-toast]::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: hsl(var(--secondary));
+  width: 100%;
+  transform-origin: left;
+  animation: shrink 2.5s linear forwards;
+}
+
+@keyframes shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }

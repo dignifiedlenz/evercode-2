@@ -2,11 +2,12 @@
 
 import courseData from "@/app/_components/(semester1)/courseData";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { saveQuestionProgress, saveUnitProgress } from "@/lib/progress-service";
-import axios from "axios";
+import { useProgress } from "@/app/_components/ProgressClient";
+import QuizNavBar from "../../../components/QuizNavBar";
+import UnitHeader from "../_components/UnitHeader";
 
 interface QuestionState {
   isAnswered: boolean;
@@ -15,7 +16,26 @@ interface QuestionState {
   attempts: number;
   completedAt: number | null;
   incorrectAnswers: string[];
+  isNewAnswer: boolean;
 }
+
+// Adjusted variants for minimal horizontal movement
+const variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? "15%" : "-15%", // Minimal travel
+    opacity: 0,
+  }),
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    x: direction < 0 ? "15%" : "-15%", // Minimal travel
+    opacity: 0,
+  }),
+};
 
 export default function QuizPage() {
   const router = useRouter();
@@ -24,11 +44,21 @@ export default function QuizPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<{[key: string]: string}>({});
   const [questionStates, setQuestionStates] = useState<{[key: string]: QuestionState}>({});
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const { trackQuestionProgress, trackUnitProgress, progress: progressData, loading: isLoadingProgress } = useProgress();
   
+  // Restore direction state
+  const [direction, setDirection] = useState(1);
+  const prevIndexRef = useRef(currentQuestionIndex);
+
   const semester = courseData.find(sem => sem.id === semesterId);
   const chapter = semester?.chapters.find(ch => ch.id === chapterId);
   const unit = chapter?.units.find(u => u.id === unitId);
   const questions = unit?.video?.questions || [];
+
+  // Restore effect for tracking prev index
+  useEffect(() => {
+     prevIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -38,18 +68,16 @@ export default function QuizPage() {
       }, 1000);
     } else if (retryCountdown === 0) {
       setRetryCountdown(null);
-      // Reset question state to allow retry, but preserve attempts and incorrect answers
       const currentQuestion = questions[currentQuestionIndex];
       setQuestionStates(prev => ({
         ...prev,
         [currentQuestion.id]: {
           ...prev[currentQuestion.id],
-          isAnswered: false,
+          isAnswered: false, 
           isCorrect: false,
           retryTime: null,
         }
       }));
-      // Clear the selected answer for this question
       setSelectedAnswers(prev => {
         const newAnswers = { ...prev };
         delete newAnswers[currentQuestion.id];
@@ -59,11 +87,85 @@ export default function QuizPage() {
     return () => clearTimeout(timer);
   }, [retryCountdown, questions, currentQuestionIndex]);
 
+  // Initialize question states from progress data
+  useEffect(() => {
+    if (!isLoadingProgress && progressData?.questionProgress) {
+      const newQuestionStates: { [key: string]: QuestionState } = {};
+      const newSelectedAnswers: { [key: string]: string } = {};
+
+      questions.forEach(question => {
+        const questionProgress = progressData.questionProgress.find(qp => qp.questionId === question.id);
+        if (questionProgress) {
+          newQuestionStates[question.id] = {
+            isAnswered: true,
+            isCorrect: questionProgress.correct,
+            retryTime: null,
+            attempts: 1,
+            completedAt: Date.now(),
+            incorrectAnswers: [],
+            isNewAnswer: false
+          };
+        } else {
+          newQuestionStates[question.id] = {
+            isAnswered: false,
+            isCorrect: false,
+            retryTime: null,
+            attempts: 0,
+            completedAt: null,
+            incorrectAnswers: [],
+            isNewAnswer: false
+          };
+        }
+      });
+
+      setQuestionStates(newQuestionStates);
+      setSelectedAnswers({});
+    }
+  }, [isLoadingProgress, progressData?.questionProgress, questions]);
+
+  // Update unit progress when question states change
+  useEffect(() => {
+    if (!isLoadingProgress && progressData) {
+      let correctCount = 0;
+      questions.forEach(question => {
+        const questionProgress = progressData.questionProgress.find(qp => qp.questionId === question.id);
+        if (questionProgress?.correct) {
+          correctCount++;
+        }
+      });
+
+      const currentUnitProgress = progressData.unitProgress?.find(up => up.unitId === unitId);
+      const currentCorrectCount = currentUnitProgress?.questionsCompleted || 0;
+
+      // Only update if the correct count has changed
+      if (correctCount !== currentCorrectCount) {
+        trackUnitProgress({
+          unitId: unitId as string,
+          questionsCompleted: correctCount,
+          totalQuestions: questions.length,
+          videoCompleted: currentUnitProgress?.videoCompleted || false
+        });
+      }
+    }
+  }, [isLoadingProgress, progressData, questions, unitId, trackUnitProgress]);
+
   if (!unit?.video?.questions) {
     return <div className="text-white">Quiz not found</div>;
   }
+  
+  // Restore direction setting in navigation
+  const handleNavigateQuestion = (index: number) => {
+     if (retryCountdown !== null) return;
+     setDirection(index > currentQuestionIndex ? 1 : -1);
+     setCurrentQuestionIndex(index);
+  };
 
-  const handleAnswerSelect = async (questionId: string, answer: string) => {
+  const handleAnswerSelect = (questionId: string, answer: string) => {
+    // Don't allow answering if already answered
+    if (questionStates[questionId]?.isAnswered) {
+      return;
+    }
+
     const currentQuestion = questions[currentQuestionIndex];
     const isCorrect = answer === currentQuestion.correctAnswer;
     const currentState = questionStates[questionId] || {
@@ -72,10 +174,10 @@ export default function QuizPage() {
       retryTime: null,
       attempts: 0,
       completedAt: null,
-      incorrectAnswers: []
+      incorrectAnswers: [],
+      isNewAnswer: true
     };
     
-    // Update question state
     const newState = {
       ...currentState,
       isAnswered: true,
@@ -85,7 +187,8 @@ export default function QuizPage() {
       completedAt: isCorrect ? Date.now() : null,
       incorrectAnswers: isCorrect 
         ? currentState.incorrectAnswers 
-        : [...currentState.incorrectAnswers, answer]
+        : [...currentState.incorrectAnswers, answer],
+      isNewAnswer: false
     };
 
     setQuestionStates(prev => ({
@@ -93,201 +196,166 @@ export default function QuizPage() {
       [questionId]: newState
     }));
 
-    // Save selected answer
     setSelectedAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }));
 
-    try {
-      // Save progress data
-      const progressData = {
-        questionId,
-        unitId,
-        chapterId,
-        attempts: newState.attempts,
-        completedAt: newState.completedAt ? new Date(newState.completedAt).toISOString() : null,
-        incorrectAnswers: newState.incorrectAnswers
-      };
+    trackQuestionProgress({
+      questionId,
+      unitId: unitId as string,
+      correct: isCorrect
+    });
 
-      // Save both basic and detailed progress
-      const [basicProgressResponse, detailedProgressResponse] = await Promise.all([
-        saveQuestionProgress(
-          unitId as string,
-          chapterId as string,
-          questionId,
-          isCorrect
-        ),
-        axios.post('/api/progress/quiz/details', progressData)
-      ]);
-
-      console.log("Progress save responses:", {
-        basic: basicProgressResponse,
-        detailed: detailedProgressResponse.data
+    if (isCorrect) {
+      // Calculate the total number of correct answers including the current one
+      const updatedStates = { ...questionStates, [questionId]: newState };
+      let calculatedCorrectCount = 0;
+      
+      // Count all correct answers
+      questions.forEach(q => {
+        if (updatedStates[q.id]?.isCorrect) {
+          calculatedCorrectCount++;
+        }
       });
 
-      if (isCorrect) {
-        // If this was the last question, mark unit as completed
-        if (currentQuestionIndex === questions.length - 1) {
-          await saveUnitProgress(
-            unitId as string,
-            chapterId as string,
-            true,
-            true
-          );
-          
-          // Navigate to next unit after a delay
-          setTimeout(() => {
-            const currentUnitIndex = chapter?.units.findIndex(u => u.id === unitId);
-            const nextUnit = currentUnitIndex !== undefined && currentUnitIndex !== -1
-              ? chapter?.units[currentUnitIndex + 1]
-              : null;
-            if (nextUnit) {
-              router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/video`);
-            }
-          }, 1500);
-        } else {
-          // Move to next question after a short delay
-          setTimeout(() => {
-            setCurrentQuestionIndex(prev => prev + 1);
-          }, 1000);
-        }
-      } else {
-        // Start retry countdown for incorrect answers
-        setRetryCountdown(10);
+      // Always update unit progress with latest count
+      trackUnitProgress({
+        unitId: unitId as string,
+        questionsCompleted: calculatedCorrectCount,
+        totalQuestions: questions.length,
+        videoCompleted: progressData?.unitProgress?.find(up => up.unitId === unitId)?.videoCompleted || false
+      });
+
+      const allCorrect = calculatedCorrectCount >= questions.length;
+      console.log("Question progress update:", { 
+        calculatedCorrectCount, 
+        totalQuestions: questions.length, 
+        allCorrect 
+      });
+
+      if (allCorrect) {
+        console.log(`All ${questions.length} questions correct. Marking unit quiz complete.`);
+        setTimeout(() => {
+          const currentUnitIdx = chapter?.units.findIndex(u => u.id === unitId);
+          const nextUnit = currentUnitIdx !== undefined && currentUnitIdx !== -1
+            ? chapter?.units[currentUnitIdx + 1]
+            : null;
+          if (nextUnit) {
+            router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/video`);
+          } else {
+            console.log("Last unit quiz completed, navigating back to chapter/dashboard (implement)");
+          }
+        }, 1500);
+      } else if (currentQuestionIndex < questions.length - 1) {
+        console.log("Correct answer, moving to next question.");
+        setDirection(1); 
+        setTimeout(() => {
+          setCurrentQuestionIndex(prev => prev + 1);
+        }, 1000);
       }
-    } catch (error) {
-      console.error("Error saving progress:", error);
-      if (axios.isAxiosError(error)) {
-        console.error("Axios error details:", {
-          response: error.response?.data,
-          status: error.response?.status,
-          headers: error.response?.headers
-        });
-      }
-      // Show error to user
-      alert("Failed to save progress. Please try again.");
+    } else {
+      console.log("Incorrect answer, starting retry countdown.");
+      setRetryCountdown(10);
     }
   };
 
+  // Restore single current question logic
   const currentQuestion = questions[currentQuestionIndex];
   const currentQuestionState = questionStates[currentQuestion.id];
 
   return (
-    <div className="relative">
-      {/* Progress Bar */}
-      <div className="fixed top-32 pl-2 sm:left-24 w-[85vw] z-40">
-        <div className="max-w-4xl mx-auto">
-          <div className="w-full bg-gray-800 h-[2px]">
-            <motion.div 
-              className="bg-secondary h-full"
-              initial={{ width: `${((currentQuestionIndex) / questions.length) * 100}%` }}
-              animate={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
+    <div className="relative overflow-hidden min-h-screen pb-24 flex flex-col">
+      <UnitHeader />
+      {/* Navbar */} 
+      <div className="pt-24 sm:pt-32">
+          <QuizNavBar 
+            questions={questions}
+            currentQuestionIndex={currentQuestionIndex}
+            questionProgress={progressData?.questionProgress} 
+            onNavigate={handleNavigateQuestion}
+          />
       </div>
 
-      {/* Main Content */}
-      <main className="pt-40 sm:px-8 md:px-48 max-w-[60vw] sm:max-w-full font-morion relative z-50">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentQuestion.id}
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-8"
-          >
-            <div className="flex px-2 justify-between items-center text-white tracking-widest text-sm">
-              <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
-              {currentQuestionState?.attempts > 0 && (
-                <span className="text-xs sm:text-sm">Attempts: {currentQuestionState.attempts}</span>
-              )}
-            </div>
+      {/* Restore flex centering container, removed overflow-hidden from here */}
+      <main className="flex-grow flex items-center justify-center relative w-full px-4 font-morion z-10">
+          {/* Restore AnimatePresence */}
+          <AnimatePresence initial={false} custom={direction} mode="wait"> 
+            {/* Restore motion.div for single question */}
+            <motion.div
+              key={currentQuestionIndex}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 400, damping: 50 }, 
+                opacity: { duration: 0.2 }
+              }}
+              // Restore width constraint and remove vertical padding
+              className="w-full max-w-[60vw]" 
+            >
+              {/* Inner content structure */} 
+              <div className="space-y-8">
+                  <div className="flex px-2 justify-between items-center text-white tracking-widest text-sm">
+                    <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
+                    {currentQuestionState?.attempts > 0 && (
+                      <span className="text-xs sm:text-sm">Attempts: {currentQuestionState.attempts}</span>
+                    )}
+                  </div>
 
-            <h2 className="text-xl px-2 sm:text-2xl text-white font-light leading-tight">
-              {currentQuestion.question}
-            </h2>
+                  <h2 className="text-xl px-2 sm:text-2xl text-white font-light leading-tight">
+                    {currentQuestion.question}
+                  </h2>
 
-            <div className="space-y-4 pt-8 relative">
-              {currentQuestion.options.map((option) => {
-                const isSelected = selectedAnswers[currentQuestion.id] === option;
-                const showResult = currentQuestionState?.isAnswered && isSelected;
-                const isCorrectAnswer = option === currentQuestion.correctAnswer;
-                const wasIncorrectlySelected = currentQuestionState?.incorrectAnswers.includes(option);
+                  <div className="space-y-4 pt-8 relative">
+                    {currentQuestion.options.map((option) => {
+                      const isSelected = selectedAnswers[currentQuestion.id] === option;
+                      const showResult = currentQuestionState?.isAnswered && isSelected;
+                      const isCorrectAnswer = option === currentQuestion.correctAnswer;
+                      const wasIncorrectlySelected = currentQuestionState?.incorrectAnswers.includes(option);
+                      const isQuestionAttempted = currentQuestionState?.isAnswered;
 
-                return (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      if (!currentQuestionState?.isAnswered && !retryCountdown) {
-                        handleAnswerSelect(currentQuestion.id, option);
-                      }
-                    }}
-                    disabled={currentQuestionState?.isAnswered || retryCountdown !== null}
-                    className={`
-                      relative z-50 w-full text-white text-left p-2 sm:p-6 border rounded-sm transition-all
-                      ${isSelected
-                        ? showResult
-                          ? isCorrectAnswer
-                            ? 'border-green-500 bg-green-500/10 text-green-500'
-                            : 'border-red-500 bg-red-500/10 text-red-500'
-                          : 'border-secondary bg-secondary/10 text-secondary'
-                        : wasIncorrectlySelected
-                          ? 'border-red-500/50 bg-red-500/5'
-                          : 'border-gray-800 hover:border-gray-700'
-                      }
-                      ${(currentQuestionState?.isAnswered || retryCountdown !== null) 
-                        ? 'cursor-not-allowed opacity-75' 
-                        : 'cursor-pointer'
-                      }
-                    `}
-                  >
-                    {option}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Feedback Messages */}
-            <AnimatePresence>
-              {currentQuestionState?.isAnswered && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className={`mt-4 p-4 rounded-sm relative z-50 ${
-                    currentQuestionState.isCorrect
-                      ? 'bg-green-500/10 text-green-500'
-                      : 'bg-red-500/10 text-red-500'
-                  }`}
-                >
-                  {currentQuestionState.isCorrect ? (
-                    <div>
-                      <p>Correct! {currentQuestionIndex < questions.length - 1 ? "Moving to next question..." : "Quiz completed!"}</p>
-                      <p className="text-sm mt-1 opacity-75">
-                        Completed in {currentQuestionState.attempts} {currentQuestionState.attempts === 1 ? 'attempt' : 'attempts'}
-                      </p>
-                    </div>
-                  ) : (
-                    <p>
-                      Incorrect. You can try again in{" "}
-                      <span className="font-bold">{retryCountdown}</span> seconds.
-                      {currentQuestionState.attempts > 1 && (
-                        <span className="block text-sm mt-1 opacity-75">
-                          Attempt {currentQuestionState.attempts}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </AnimatePresence>
-      </main>
+                      return (
+                        <button
+                          key={option}
+                          onClick={() => {
+                            if (!isQuestionAttempted && !retryCountdown) {
+                              handleAnswerSelect(currentQuestion.id, option);
+                            }
+                          }}
+                          disabled={isQuestionAttempted || retryCountdown !== null}
+                          className={`
+                            relative z-50 w-full text-white text-left p-2 sm:p-6 border rounded-sm transition-all
+                            ${showResult
+                              ? (isCorrectAnswer ? 'border-secondary text-secondary' : 'border-red-500 bg-red-500/10 text-red-500')
+                              : (isSelected ? 'border-secondary bg-secondary/10 text-secondary' : (wasIncorrectlySelected ? 'border-red-500/50 bg-red-500/5 opacity-60' : 'border-gray-800 hover:border-gray-700'))
+                            }
+                            ${(isQuestionAttempted || retryCountdown !== null) 
+                              ? 'cursor-not-allowed' 
+                              : 'cursor-pointer'
+                            }
+                            ${!isSelected && isQuestionAttempted && !isCorrectAnswer && option === currentQuestion.correctAnswer
+                              ? '!border-secondary !text-secondary'
+                              : ''
+                            }
+                          `}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                    {retryCountdown !== null && (
+                      <div className="text-center text-yellow-400 pt-4">
+                        Incorrect. Please review and try again in {retryCountdown}s.
+                      </div>
+                    )}
+                  </div>
+                </div>
+            </motion.div>
+          </AnimatePresence>
+       </main>
     </div>
   );
 } 

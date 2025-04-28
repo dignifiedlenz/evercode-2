@@ -1,58 +1,122 @@
-import { NextResponse } from "next/server";
-import argon2 from "argon2";
-import { prisma } from "@/lib/prisma"; // your Prisma client import
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Add a simple GET method for testing
+export async function GET() {
+  return new NextResponse(
+    JSON.stringify({ message: 'Signup API route is accessible' }),
+    { 
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      }
+    }
+  )
+}
 
 export async function POST(request: Request) {
   try {
-    const { email, password, firstName, lastName } = await request.json();
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Missing email or password" },
-        { status: 400 }
-      );
+    console.log('API route reached successfully')
+    
+    // Parse request body
+    let body;
+    try {
+      const rawBody = await request.text()
+      console.log('Raw request body:', rawBody)
+      body = JSON.parse(rawBody)
+      console.log('Parsed request body:', body)
+    } catch (e) {
+      console.error('Error parsing request body:', e)
+      return new NextResponse(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { 
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
     }
-    // if you require firstName, lastName => also check them here
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "User already exists" },
-        { status: 400 }
-      );
+    const { userId, email, firstName, lastName } = body
+
+    // Validate required fields
+    if (!userId || !email || !firstName || !lastName) {
+      console.log('Missing required fields:', { userId, email, firstName, lastName })
+      return new NextResponse(
+        JSON.stringify({ error: 'User ID, email, first name, and last name are required' }),
+        { 
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
     }
 
-    // Hash password
-    const hashedPassword = await argon2.hash(password);
+    console.log('Creating user in database with:', {
+      auth_id: userId,
+      email,
+      firstName,
+      lastName
+    })
 
-    // Create user
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-      },
-    });
-
-    return NextResponse.json(
-      {
-        message: "User created successfully",
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-        },
-      },
-      { status: 201 }
-    );
+    try {
+      // Create user in Prisma database
+      const user = await prisma.user.create({
+        data: {
+          auth_id: userId,
+          email,
+          firstName,
+          lastName,
+        }
+      })
+      console.log('User created successfully:', user)
+      
+      return new NextResponse(
+        JSON.stringify(user),
+        { 
+          status: 200,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
+    } catch (prismaError) {
+      console.error('Prisma error details:', prismaError)
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'Database error', 
+          details: prismaError instanceof Error ? prismaError.message : 'Unknown database error' 
+        }),
+        { 
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store'
+          }
+        }
+      )
+    }
   } catch (error) {
-    console.error("SIGNUP_ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error('Error in signup process:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'
+    return new NextResponse(
+      JSON.stringify({ error: errorMessage }),
+      { 
+        status: 500,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
+      }
+    )
   }
-}
+} 

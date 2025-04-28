@@ -1,127 +1,114 @@
-datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  learner
-  admin
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ROOT_ADMIN
+  SUPER_ADMIN
+  REGIONAL_ADMIN
+  LOCAL_ADMIN
+  USER
+}
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String    @id @default(uuid())
+  auth_id       String    @unique // Links to Supabase Auth
   email         String    @unique
-  password      String
   firstName     String?
   lastName      String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   lastLoginTime DateTime?
-  deviceType    String?
-  role          Role      @default(learner)
-  groupId       String?   @db.ObjectId
-  group         Group?    @relation(fields: [groupId], references: [id])
-  progress      UserProgress?
-  // Add any extra fields you want (e.g. name, createdAt, etc.)
+
+  // User progress tracking
+  videoProgress    VideoProgress[]
+  questionProgress QuestionProgress[]
+  unitProgress     UnitProgress[]
+
+  // Group relationships
+  groupId     String?
+  group       Group?    @relation(fields: [groupId], references: [id])
+  
+  // Management relationships
+  managedGroups    Group[]   @relation("GroupManagers")
+  managedRegions   Region[]  @relation("RegionManagers")
+  managedDioceses  Diocese[] @relation("DioceseManagers")
 }
 
 model Group {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  name  String @unique
-  users User[]
+  id        String   @id @default(uuid())
+  name      String
+  regionId  String
+  region    Region   @relation(fields: [regionId], references: [id])
+  users     User[]
+  managers  User[]   @relation("GroupManagers")
+}
+
+model Region {
+  id        String   @id @default(uuid())
+  name      String
+  dioceseId String
+  diocese   Diocese  @relation(fields: [dioceseId], references: [id])
+  groups    Group[]
+  managers  User[]   @relation("RegionManagers")
+}
+
+model Diocese {
+  id        String   @id @default(uuid())
+  name      String
+  regions   Region[]
+  managers  User[]   @relation("DioceseManagers")
 }
 
 // Progress tracking models
-model UserProgress {
-  id                String             @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String             @db.ObjectId
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  videoProgress     VideoProgress[]
-  questionProgress  QuestionProgress[]
-  unitProgress      UnitProgress[]
-  quizProgressDetails QuizProgressDetails[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  @@unique([userId])
-}
-
 model VideoProgress {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  videoId     String
-  chapterId   String
-  unitId      String
-  currentTime Float
-  duration    Float
-  completed   Boolean      @default(false)
-  progressId  String       @db.ObjectId
-  progress    UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
-  lastUpdated DateTime     @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  unitId      String   // ID from your hardcoded course data
+  currentTime Float    // Current position in the video (seconds)
+  duration    Float    // Total video duration (seconds)
+  completed   Boolean  @default(false)
+  lastUpdated DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
-  @@unique([progressId, videoId])
-  @@index([progressId])
-  @@index([videoId])
-  @@index([unitId])
+  @@unique([userId, unitId])
 }
 
 model QuestionProgress {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  questionId  String
-  chapterId   String
-  unitId      String
-  answered    Boolean      @default(false)
-  correct     Boolean      @default(false)
-  progressId  String       @db.ObjectId
-  progress    UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
-  lastUpdated DateTime     @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  questionId  String   // ID from your hardcoded course data
+  unitId      String   // ID from your hardcoded course data
+  attempts    Int      @default(0)
+  correct     Boolean  @default(false)
+  lastUpdated DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
-  @@unique([progressId, questionId])
-  @@index([progressId])
-  @@index([questionId])
-  @@index([unitId])
+  @@unique([userId, questionId])
 }
 
 model UnitProgress {
-  id                 String       @id @default(auto()) @map("_id") @db.ObjectId
-  unitId             String
-  chapterId          String
-  videoCompleted     Boolean      @default(false)
-  questionsCompleted Boolean      @default(false)
-  completed          Boolean      @default(false)
-  progressId         String       @db.ObjectId
-  progress           UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
-  lastAccessed       DateTime     @default(now())
-  firstName          String?
-  lastName           String?
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  unitId            String   // ID from your hardcoded course data
+  videoCompleted    Boolean  @default(false)
+  questionsCompleted Int      @default(0)
+  totalQuestions    Int      @default(5) // Always 5 questions per unit
+  lastUpdated       DateTime @updatedAt
+  createdAt         DateTime @default(now())
 
-  @@unique([progressId, unitId])
-  @@index([progressId])
-  @@index([unitId])
-  @@index([chapterId])
-}
-
-model QuizProgressDetails {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String    @db.ObjectId
-  questionId      String
-  unitId          String
-  chapterId       String
-  attempts        Int       @default(0)
-  completedAt     DateTime?
-  incorrectAnswers String[]
-  progressId      String?   @db.ObjectId
-  progress        UserProgress? @relation(fields: [progressId], references: [id], onDelete: Cascade)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@unique([userId, questionId])
-  @@index([userId])
-  @@index([questionId])
-  @@index([unitId])
-  @@index([chapterId])
-  @@index([progressId])
+  @@unique([userId, unitId])
 }
 

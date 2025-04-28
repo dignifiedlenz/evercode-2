@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+this codebase has recently been converted from a mongodb and prisma with api routes approach to a supabase backend with server actions. Please keep this in mind when making changes
+
+- You can @ files here
+- You can use markdown but dont have to

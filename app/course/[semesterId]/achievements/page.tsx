@@ -1,221 +1,196 @@
-// @ts-nocheck
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import courseData from "@/app/_components/(semester1)/courseData";
-import { Metadata } from "next";
+"use client";
 
-// Generate metadata for the page
-export const metadata: Metadata = {
-  title: 'Achievements',
-  description: 'Track your progress and achievements'
-};
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { Trophy, Flame, BookOpen, CheckCircle, Calendar, Clock } from "lucide-react";
 
-// Main page component with simplified type annotations
-export default async function AchievementsPage({ params }: {
-  params: { semesterId: string }
-}) {
-  const { semesterId } = params;
-  
-  // Authentication check
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect("/signin");
-  }
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  type: 'streak' | 'units' | 'quizzes' | 'chapters' | 'time' | 'consistency';
+  threshold: number;
+  progress: number;
+  unlocked_at: string | null;
+  icon: string;
+}
 
-  // Get user data with progress information and quiz details
-  const dbUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      progress: {
-        include: {
-          quizProgressDetails: true,
-          unitProgress: true
-        }
+export default function AchievementsPage() {
+  const pathname = usePathname();
+  const [semesterId, setSemesterId] = useState<string>("");
+  const [currentSemester, setCurrentSemester] = useState<number>(1);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Extract semesterId from URL path
+  useEffect(() => {
+    const pathSegments = pathname.split('/');
+    const sid = pathSegments[2] || "";
+    setSemesterId(sid);
+    setCurrentSemester(parseInt(sid.replace('semester-', ''), 10) || 1);
+  }, [pathname]);
+
+  useEffect(() => {
+    // Mock achievements data - in a real app, these would come from an API
+    const mockAchievements: Achievement[] = [
+      {
+        id: "streak-1",
+        name: "7-Day Streak",
+        description: "Study for 7 days in a row",
+        type: "streak",
+        threshold: 7,
+        progress: 5,
+        unlocked_at: null,
+        icon: "flame"
+      },
+      {
+        id: "units-1",
+        name: "Unit Master",
+        description: "Complete 5 units",
+        type: "units",
+        threshold: 5,
+        progress: 3,
+        unlocked_at: null,
+        icon: "book"
+      },
+      {
+        id: "quizzes-1",
+        name: "Quiz Champion",
+        description: "Complete 10 quizzes with 80% or higher",
+        type: "quizzes",
+        threshold: 10,
+        progress: 7,
+        unlocked_at: null,
+        icon: "check"
+      },
+      {
+        id: "time-1",
+        name: "Time Warrior",
+        description: "Study for 20 hours this semester",
+        type: "time",
+        threshold: 20,
+        progress: 15,
+        unlocked_at: null,
+        icon: "clock"
+      },
+      {
+        id: "consistency-1",
+        name: "Consistent Learner",
+        description: "Study at least 3 times per week for 4 weeks",
+        type: "consistency",
+        threshold: 12,
+        progress: 8,
+        unlocked_at: null,
+        icon: "calendar"
       }
+    ];
+
+    setAchievements(mockAchievements);
+    setLoading(false);
+  }, [currentSemester]);
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'streak':
+        return <Flame className="w-6 h-6 text-orange-500" />;
+      case 'units':
+        return <BookOpen className="w-6 h-6 text-blue-500" />;
+      case 'quizzes':
+        return <CheckCircle className="w-6 h-6 text-green-500" />;
+      case 'time':
+        return <Clock className="w-6 h-6 text-purple-500" />;
+      case 'consistency':
+        return <Calendar className="w-6 h-6 text-yellow-500" />;
+      default:
+        return <Trophy className="w-6 h-6 text-gray-500" />;
     }
-  });
+  };
 
-  if (!dbUser) {
-    redirect("/signup");
-  }
+  const getProgressPercentage = (progress: number, threshold: number) => {
+    return Math.min((progress / threshold) * 100, 100);
+  };
 
-  // Get semester data
-  const currentSemester = parseInt(semesterId.replace('semester-', ''), 10) || 1;
-  const semester = courseData.find(sem => sem.id === `semester-${currentSemester}`);
-  
-  if (!semester) {
+  if (loading) {
     return (
-      <div className="p-8 text-white">
-        Semester not found
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
       </div>
     );
   }
-  
-  // Calculate completed units using unitProgress
-  const completedUnits = dbUser.progress?.unitProgress.reduce((acc, progress) => {
-    if (progress.questionsCompleted && progress.videoCompleted) {
-      if (!acc[progress.chapterId]) {
-        acc[progress.chapterId] = [];
-      }
-      acc[progress.chapterId].push(progress.unitId);
-    }
-    return acc;
-  }, {} as Record<string, string[]>) || {};
 
-  const totalCompleted = Object.values(completedUnits).reduce(
-    (acc, units) => acc + units.length, 0
-  );
-  
-  // Calculate total units in the semester
-  const totalUnitsInSemester = semester.chapters.reduce(
-    (acc, chapter) => acc + chapter.units.length, 0
-  );
-  
-  // Calculate chapter completion
-  const chapterCompletions = semester.chapters.map(chapter => {
-    const chapterUnits = chapter.units.length;
-    const completedInChapter = completedUnits[chapter.id]?.length || 0;
-    const percentComplete = chapterUnits > 0 
-      ? Math.round((completedInChapter / chapterUnits) * 100) 
-      : 0;
-      
-    return {
-      id: chapter.id,
-      title: chapter.title,
-      completed: completedInChapter,
-      total: chapterUnits,
-      percent: percentComplete
-    };
-  });
-
-  // Calculate quiz statistics
-  const quizStats = dbUser.progress?.quizProgressDetails.reduce((acc, detail) => {
-    acc.totalAttempts += detail.attempts;
-    acc.totalQuestions += 1;
-    if (detail.completedAt) {
-      acc.completedQuestions += 1;
-    }
-    return acc;
-  }, { totalAttempts: 0, totalQuestions: 0, completedQuestions: 0 }) || 
-  { totalAttempts: 0, totalQuestions: 0, completedQuestions: 0 };
-
-  const averageAttempts = quizStats.completedQuestions > 0 
-    ? (quizStats.totalAttempts / quizStats.completedQuestions).toFixed(1)
-    : 0;
-  
   return (
-    <div className="p-8 sm:px-28 md:px-48 backdrop-blur-sm w-screen h-screen rounded-lg max-w-4xlmy-8 overflow-y-auto">
-      {/* User Info Section */}
-      <div className="flex py-10 sm:pt-20 items-center gap-6 mb-8">
-        <div className="bg-black/55 w-20 h-20 rounded-full flex items-center justify-center border border-zinc-600">
-          <span className="text-secondary text-3xl font-morion">
-            {dbUser.firstName?.[0]}{dbUser.lastName?.[0]}
-          </span>
-        </div>
-        <div>
-          <h1 className="text-2xl font-morion  text-white">{dbUser.firstName} {dbUser.lastName}</h1>
-          <p className="text-white/60 font-morion-light mt-1">Semester {currentSemester} Student</p>
-        </div>
-      </div>
-      
-      <div className="grid gap-6 font-morion-medium">
-
-        {/* Achievements */}
-        <div className="bg-black/55 p-6 rounded-lg border border-white/10">
-          <h2 className="text-xl text-white mb-4">Achievements</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 1 ? 'bg-secondary/20 border-secondary' : 'bg-black/25 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">First Step</h3>
-              <p className="text-white/60 text-sm">Complete your first unit</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 5 ? 'bg-secondary/20 border-secondary' : 'bg-black/25 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">Getting Started</h3>
-              <p className="text-white/60 text-sm">Complete 5 units</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 10 ? 'bg-secondary/20 border-secondary' : 'bg-black/25 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">On a Roll</h3>
-              <p className="text-white/60 text-sm">Complete 10 units</p>
-            </div>
-            <div className={`p-4 rounded-lg border ${totalCompleted >= 20 ? 'bg-secondary/20 border-secondary' : 'bg-black/25 border-white/10 opacity-50'}`}>
-              <h3 className="text-white font-semibold">Dedicated Learner</h3>
-              <p className="text-white/60 text-sm">Complete 20 units</p>
-            </div>
-          </div>
+    <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-16">
+      <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-morion text-white">Semester {currentSemester} Achievements</h1>
         </div>
 
-        {/* Progress Overview */}
-        <div className="bg-black/55 p-6 rounded-lg border border-white/10">
-          <h2 className="text-xl text-white mb-4">Progress Overview</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-black/25 p-4 rounded-lg border border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="bg-secondary/30 w-12 h-12 rounded-full flex items-center justify-center">
-                  <span className="text-secondary text-lg">{totalCompleted}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {achievements.map((achievement) => (
+            <div
+              key={achievement.id}
+              className="bg-white/5 rounded-lg border border-white/10 p-4 hover:bg-white/10 transition-colors"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                {getIcon(achievement.type)}
+                <h3 className="text-white font-medium">{achievement.name}</h3>
+              </div>
+              
+              <p className="text-white/60 text-sm mb-4">{achievement.description}</p>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Progress</span>
+                  <span className="text-white/60">
+                    {achievement.progress}/{achievement.threshold}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-white text-sm">Units Completed</p>
-                  <p className="text-white/60 text-xs">
-                    {Math.round((totalCompleted / totalUnitsInSemester) * 100)}% Complete
+                
+                <div className="w-full bg-white/10 rounded-full h-2">
+                  <div
+                    className="bg-secondary h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${getProgressPercentage(achievement.progress, achievement.threshold)}%`
+                    }}
+                  />
+                </div>
+                
+                {achievement.unlocked_at && (
+                  <p className="text-xs text-green-500 mt-2">
+                    Unlocked on {new Date(achievement.unlocked_at).toLocaleDateString()}
                   </p>
-                </div>
+                )}
               </div>
             </div>
-            
-            <div className="bg-black/55 p-4 rounded-lg border border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="bg-secondary/30 w-12 h-12 rounded-full flex items-center justify-center">
-                  <span className="text-secondary text-lg">{quizStats.completedQuestions}</span>
-                </div>
-                <div>
-                  <p className="text-white text-sm">Quizzes Completed</p>
-                  <p className="text-white/60 text-xs">
-                    {quizStats.totalQuestions} Total Quizzes
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="bg-secondary/30 w-12 h-12 rounded-full flex items-center justify-center">
-                  <span className="text-secondary text-lg">{averageAttempts}</span>
-                </div>
-                <div>
-                  <p className="text-white text-sm">Average Attempts</p>
-                  <p className="text-white/60 text-xs">
-                    Per Completed Quiz
-                  </p>
-                </div>
-              </div>
+          ))}
+        </div>
+
+        {/* Stats Overview */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+            <h3 className="text-white/60 text-sm mb-2">Current Streak</h3>
+            <div className="flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" />
+              <span className="text-2xl text-white font-medium">5 days</span>
             </div>
           </div>
           
-          {/* Chapter Progress */}
-          <div className="space-y-2 mt-6">
-            <h3 className="text-white text-lg mb-2">Chapter Progress</h3>
-            {chapterCompletions.map(chapter => (
-              <div key={chapter.id} className="bg-white/5 p-3 rounded">
-                <div className="flex justify-between text-white mb-1">
-                  <span>{chapter.title}</span>
-                  <span>{chapter.completed}/{chapter.total}</span>
-                </div>
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-secondary transition-all duration-500"
-                    style={{ width: `${chapter.percent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+            <h3 className="text-white/60 text-sm mb-2">Total Study Time</h3>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-purple-500" />
+              <span className="text-2xl text-white font-medium">15 hours</span>
+            </div>
+          </div>
+          
+          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+            <h3 className="text-white/60 text-sm mb-2">Completion Rate</h3>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <span className="text-2xl text-white font-medium">75%</span>
+            </div>
           </div>
         </div>
-        
-        
       </div>
     </div>
   );

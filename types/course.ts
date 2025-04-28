@@ -18,6 +18,8 @@ export interface Question {
     id: string;
     title: string;
     video: Video;
+    backgroundImage?: string;
+    description?: string;
   }
   
   export interface Chapter {
@@ -25,6 +27,7 @@ export interface Question {
     title: string;
     description: string;
     backgroundImage: string;
+    instructor?: Instructor;
     units: Unit[];
   }
   
@@ -48,5 +51,5 @@ export interface Question {
 
   
   export interface CompletedUnits {
-    [chapterId: string]: string[];
+    [unitId: string]: boolean;
   }

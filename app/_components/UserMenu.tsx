@@ -4,145 +4,159 @@
 
 import React, { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, User, RefreshCw } from "lucide-react"; // Added RefreshCw icon
+import { ChevronDown, User, RefreshCw, LogOut } from "lucide-react";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react"; // Import signOut and useSession
-import { cn } from "@/lib/utils"; // Utility function for conditional classNames
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { resetUserProgress } from "@/lib/progress-service"; // Import the reset function
-import { toast } from "react-hot-toast"; // You might need to install this package if not already installed
-
-interface CustomUser {
-    id: string;
-    email: string | null;
-    name: string | null;
-    role?: string;
-}
-
-interface CustomSession {
-    user: CustomUser;
-    expires: string;
-}
+import { resetUserProgress } from "@/app/actions/progress";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { User as UserType } from '@/types/user'
 
 const UserMenu: React.FC = () => {
-    const { data: session } = useSession() as { data: CustomSession | null };
+    const { user, loading, signOut } = useAuth();
     const [isResetting, setIsResetting] = useState(false);
+    const router = useRouter();
+
+    // Add console log for debugging
+    console.log('UserMenu Render:', { loading, user });
 
     // Hardcoded menu items
     const menuItems = [
         { label: "Update Profile", href: "/profile" },
         { label: "Support", href: "/profile" },
         // Add admin dashboard link conditionally
-        ...(session?.user?.role === "admin" ? [
-            { label: "Admin Dashboard", href: "/course/adminDashboard" }
+        ...(user?.role === "admin" ? [
+            { label: "Admin Dashboard", href: "/admin/controlPanel" }
         ] : [])
     ];
 
-    if (!session) {
-        return null;
-    }
+    const handleSignOut = async () => {
+        console.log('Sign out button clicked');
+        try {
+            console.log('Attempting to sign out...');
+            await signOut();
+            console.log('Sign out successful');
+            toast.success('Signed out successfully', {
+                description: 'Redirecting to sign in page...'
+            });
+        } catch (error) {
+            console.error('Sign out error:', error);
+            toast.error('Sign out failed', {
+                description: 'An unexpected error occurred'
+            });
+        }
+    };
 
-    // Handler for reset progress
+    // Handler for reset progress (uses imported Supabase action)
     const handleResetProgress = async () => {
         if (confirm("Are you sure you want to reset all your course progress? This cannot be undone.")) {
             setIsResetting(true);
-            
             try {
-                const result = await resetUserProgress();
-                
+                const result = await resetUserProgress(); // Calls the server action
+
                 if (result.success) {
-                    const details = result.details || {};
-                    const totalReset = (details.deletedVideos || 0) + 
-                                       (details.deletedQuestions || 0) + 
-                                       (details.deletedUnits || 0);
-                                       
-                    if (totalReset > 0) {
-                        toast.success(`Progress reset: ${totalReset} items deleted (${details.deletedVideos || 0} videos, ${details.deletedQuestions || 0} questions, ${details.deletedUnits || 0} units)`);
-                    } else {
-                        toast.success("Your progress has been reset successfully");
-                    }
-                    
+                    toast.success('Progress reset', {
+                        description: 'Your course progress has been reset successfully'
+                    });
                     // Force refresh the page to show updated state
                     setTimeout(() => {
                         window.location.reload();
                     }, 1500);
                 } else {
-                    console.error("Reset failed:", result.details);
-                    toast.error("Failed to reset progress. Please try again later.");
+                    console.error("Reset failed:", result.error);
+                    toast.error('Reset failed', {
+                        description: result.error || 'An unknown error occurred'
+                    });
                 }
             } catch (error) {
-                console.error("Error resetting progress:", error);
-                toast.error("An error occurred while resetting progress");
+                console.error("Error calling resetUserProgress action:", error);
+                toast.error('Reset failed', {
+                    description: 'An error occurred while resetting progress'
+                });
             } finally {
                 setIsResetting(false);
             }
         }
     };
 
+    if (loading || !user) {
+        // Add log before returning null
+        console.log('UserMenu: Returning null because loading or no user.', { loading, hasUser: !!user });
+        return null;
+    }
+
+    // --- Get Avatar URL --- 
+    // Using hardcoded default avatar for now
+    const avatarUrl = "/thomas-aquinas.jpeg"; 
+
     return (
         <div className="fixed top-3 right-3 sm:right-6 sm:top-6 z-50">
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                     <button
-                        className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full focus:outline-none"
+                        className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/20 hover:bg-black/30 focus:outline-none transition-colors"
                         aria-label="User Menu"
                     >
-                        {/* Replace the src with your actual avatar URL or leave as undefined to use the default icon */}
                         <Image
-                            width={100}
-                            height={100}
-                            src="/thomas-aquinas.jpeg" // Replace with your avatar image path or URL
-                            alt="User Avatar"
-                            className="w-full h-full rounded-full object-cover"
+                            width={48}
+                            height={48}
+                            src={avatarUrl}
+                            alt={user.firstName || "User Avatar"}
+                            className="w-full h-full rounded-full object-cover border-2 border-transparent group-hover:border-secondary transition-colors duration-300"
                         />
-                        {/* Default User Icon for smaller screens or if avatar not available */}
-                        <User className="w-2 h-2 sm:w-6 sm:h-6 text-gray-600 md:hidden" />
-                        <ChevronDown className="ml-2 w-2 h-2 sm:w-4 sm:h-4 text-gray-600" />
                     </button>
                 </DropdownMenu.Trigger>
 
                 <DropdownMenu.Content
                     align="end"
                     sideOffset={5}
-                    className="w-48 shadow-lg animate-fadeIn"
+                    className="w-56 bg-black/90 backdrop-blur-sm rounded-lg p-2 shadow-lg border border-zinc-800 text-white font-morion animate-fadeIn z-50"
                 >
+                    <div className="px-3 py-2 border-b border-zinc-700 mb-1">
+                        <p className="text-xs text-white/60">Signed in as</p>
+                        <p className="text-sm font-medium text-white truncate">{user.email || 'No Email'}</p>
+                    </div>
+
                     {menuItems.map((item, index) => (
-                        <DropdownMenu.Item key={index} className="group">
+                        <DropdownMenu.Item key={index} asChild className="focus:outline-none">
                             <Link
                                 href={item.href}
-                                className="flex items-center font-morion bg-white px-4 py-2 text-sm text-gray-700 hover:bg-secondary-foreground"
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-white/90 hover:text-white hover:bg-white/10 rounded cursor-pointer focus:bg-white/10 focus:text-white"
                             >
                                 {item.label}
                             </Link>
                         </DropdownMenu.Item>
                     ))}
-                    
-                    {/* Reset Progress Button */}
-                    <DropdownMenu.Item className="group">
+
+                    <DropdownMenu.Separator className="h-px bg-zinc-700 my-1" />
+                    <DropdownMenu.Item onSelect={(e) => e.preventDefault()} className="focus:outline-none">
                         <button
                             onClick={handleResetProgress}
                             disabled={isResetting}
                             className={cn(
-                                "w-full text-left flex items-center px-4 py-2 text-sm font-morion text-red-600 bg-white hover:bg-red-50",
-                                "focus:outline-none focus:bg-red-50",
+                                "w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm rounded cursor-pointer",
+                                "text-red-400 hover:text-red-300 hover:bg-white/10 focus:bg-white/10 focus:text-red-300",
                                 isResetting && "opacity-50 cursor-not-allowed"
                             )}
                         >
-                            <RefreshCw className="w-4 h-4 mr-2" />
+                            <RefreshCw className="w-4 h-4" />
                             {isResetting ? "Resetting..." : "Reset Progress"}
                         </button>
                     </DropdownMenu.Item>
-                    
-                    <DropdownMenu.Item className="group">
-                        <button
-                            onClick={() => signOut({ callbackUrl: "/" })}
+
+                    <DropdownMenu.Separator className="h-px bg-zinc-700 my-1" />
+                    <DropdownMenu.Item onClick={handleSignOut} className="focus:outline-none">
+                        <div
                             className={cn(
-                                "w-full text-left flex items-center px-4 py-2 text-sm font-morion text-black bg-white hover:bg-secondary-foreground hover:text-black",
-                                "focus:outline-none focus:bg-secondary-foreground focus:text-black"
+                                "w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm rounded cursor-pointer",
+                                "text-white/90 hover:text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
                             )}
                         >
+                            <LogOut className="w-4 h-4" />
                             Sign Out
-                        </button>
+                        </div>
                     </DropdownMenu.Item>
                 </DropdownMenu.Content>
             </DropdownMenu.Root>

@@ -1,0 +1,114 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+<view_transitions_rule>
+When implementing Next.js view transitions:
+
+1. ROOT LAYOUT SETUP
+- ALWAYS wrap the entire content of RootLayout with <ViewTransitions> component
+- Import from "next-view-transitions" package
+- Wrapping order must be:
+  <ViewTransitions>
+    <html>
+      <body>
+        {children}
+      </body>
+    </html>
+  </ViewTransitions>
+- Must be in root layout.tsx file
+- ViewTransitions should be outermost wrapper
+
+2. NAVIGATION IMPLEMENTATION
+- Use "use client" directive for navigation components
+- Import useTransitionRouter:
+  ```typescript
+  import { useTransitionRouter } from "next-view-transitions";
+  ```
+- Replace standard navigation with transition-aware navigation:
+  ```typescript
+  const Nav = () => {
+    const router = useTransitionRouter();
+    
+    return (
+      <Link
+        href={route.url}
+        onClick={(e) => {
+          e.preventDefault();
+          router.push(route.url, {
+            onTransitionReady: customAnimation // Optional animation callback
+          });
+        }}
+      >
+        {route.label}
+      </Link>
+    );
+  };
+  ```
+
+3. TRANSITION ANIMATIONS
+- Define animations using the View Transitions API syntax
+- Use pseudoElements "::view-transition-old(root)" and "::view-transition-new(root)"
+- Example animation structure:
+  ```typescript
+  const pageAnimation = () => {
+    // Animate out (old page)
+    document.documentElement.animate(
+      [
+        { opacity: 1, transform: "translateY(0)" },
+        { opacity: 0, transform: "translateY(-100px)" }
+      ],
+      {
+        duration: 1000,
+        easing: "cubic-bezier(0.76, 0, 0.24, 1)",
+        fill: "forwards",
+        pseudoElement: "::view-transition-old(root)"
+      }
+    );
+
+    // Animate in (new page)
+    document.documentElement.animate(
+      [
+        { transform: "translateY(100%)" },
+        { transform: "translateY(0)" }
+      ],
+      {
+        duration: 1000,
+        easing: "cubic-bezier(0.76, 0, 0.24, 1)",
+        fill: "forwards",
+        pseudoElement: "::view-transition-new(root)"
+      }
+    );
+  };
+  ```
+
+4. PAGE WRAPPER (Optional for additional animations)
+- Create a PageWrapper component for per-page animations
+- Use "use client" directive
+- Can combine with Framer Motion or other animation libraries:
+  ```typescript
+  const PageWrapper = (props: HTMLMotionProps<"div">) => {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        {...props}
+      />
+    );
+  };
+  ```
+
+5. SETUP REQUIREMENTS
+- Ensure package.json includes "next-view-transitions" dependency
+- If using React 19+, install with --legacy-peer-deps flag
+- Consider adding framer-motion for additional animation capabilities
+
+6. BEST PRACTICES
+- Don't place ViewTransitions in individual pages
+- Keep animations performant (stick to transform and opacity properties)
+- Consider providing fallbacks for browsers that don't support View Transitions API
+- Use consistent timing and easing across transitions
+- Avoid nesting multiple transition containers
+</view_transitions_rule>

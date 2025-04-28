@@ -3,6 +3,7 @@ import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import argon2 from "argon2";
 import { prisma } from "@/lib/prisma";
+import { supabase } from './supabase'
 
 declare module "next-auth/jwt" {
     interface JWT {
@@ -70,3 +71,107 @@ export const authOptions: AuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+export async function signIn(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) throw error
+
+  // Get the user from our database using the Supabase auth_id
+  const user = await prisma.user.findUnique({
+    where: { auth_id: data.user.id },
+    include: {
+      progress: {
+        include: {
+          unitProgress: true,
+          quizProgress: true
+        }
+      }
+    }
+  })
+
+  if (!user) {
+    throw new Error('User not found in database')
+  }
+
+  return { user, session: data.session }
+}
+
+export async function signUp(email: string, password: string, firstName?: string, lastName?: string) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
+    })
+
+    if (error) throw error
+
+    // Check if user already exists in our database
+    const existingUser = await prisma.user.findUnique({
+      where: { auth_id: data.user!.id }
+    })
+
+    if (existingUser) {
+      console.log('User already exists in database:', existingUser)
+      return { user: existingUser, session: data.session }
+    }
+
+    // Create the user in our database
+    const user = await prisma.user.create({
+      data: {
+        auth_id: data.user!.id,
+        email,
+        firstName,
+        lastName,
+        role: 'user'
+      }
+    })
+
+    console.log('Created new user in database:', user)
+    return { user, session: data.session }
+  } catch (error) {
+    console.error('Error in signUp:', error)
+    throw error
+  }
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export async function getSession() {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) throw error
+  return session
+}
+
+export async function getUser() {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) throw error
+  if (!user) return null
+
+  // Get the user from our database
+  const dbUser = await prisma.user.findUnique({
+    where: { auth_id: user.id },
+    include: {
+      progress: {
+        include: {
+          unitProgress: true,
+          quizProgress: true
+        }
+      }
+    }
+  })
+
+  return dbUser
+}

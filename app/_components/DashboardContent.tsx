@@ -7,14 +7,14 @@ import courseData from "./(semester1)/courseData";
 import Sidebar from "./sidebar";
 import { CompletedUnits, Unit, Semester, Chapter } from "@/types/course";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { UserProgress } from "@/lib/progress-service";
+import { useAuth } from "@/context/AuthContext";
+import { motion, animate, useMotionValue, useTransform } from "framer-motion";
+import CircularProgress from './CircularProgress';
 
 interface DashboardContentProps {
   firstName: string;
-  progress: number;
   currentSemester: number;
-  completedUnits: CompletedUnits;
   semesters: Semester[];
 }
 
@@ -32,11 +32,10 @@ interface NavLink {
 
 export default function DashboardContent({ 
   firstName, 
-  progress, 
   currentSemester,
-  completedUnits,
   semesters
 }: DashboardContentProps) {
+  const { user } = useAuth();
   const [selectedInstructor, setSelectedInstructor] = useState<number | null>(null);
   const router = useRouter();
   const [nextIncompleteUnit, setNextIncompleteUnit] = useState<{
@@ -52,11 +51,40 @@ export default function DashboardContent({
   } | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [progressData, setProgressData] = useState<UserProgress | null>(null);
+  const [isContentVisible, setIsContentVisible] = useState(false);
 
-  const semester = courseData.find(sem => sem.id === `semester-${currentSemester}`);
+  // Combine loading states
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [completedUnitMap, setCompletedUnitMap] = useState<Record<string, boolean>>({});
+  const [calculatedProgress, setCalculatedProgress] = useState(0);
+  const [videosCompleted, setVideosCompleted] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [totalVideos, setTotalVideos] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+
+  // Add motion values for animations
+  const semesterProgress = useMotionValue(0);
+  const videosProgress = useMotionValue(0);
+  const questionsProgress = useMotionValue(0);
+  const roundedSemesterProgress = useTransform(semesterProgress, value => `${Math.round(value)}%`);
+  const roundedVideosProgress = useTransform(videosProgress, value => Math.round(value));
+  const roundedQuestionsProgress = useTransform(questionsProgress, value => Math.round(value));
+
+  // Get semester data with proper ID format
+  const semester = useMemo(() => {
+    return semesters.find(sem => sem.id === `semester-${currentSemester}`);
+  }, [semesters, currentSemester]);
+
   const instructors = semester?.instructors || [];
-  const backgroundImage = semester?.backgroundImage || '/540598ldsdl.jpg';
   const semesterTitle = semester?.title?.split(': ')[1] || 'Home';
+
+  // Get the background image path
+  const backgroundImagePath = useMemo(() => {
+    if (!semester?.backgroundImage) return '/540598ldsdl.jpg';
+    return semester.backgroundImage.startsWith('/') 
+      ? semester.backgroundImage 
+      : `/${semester.backgroundImage}`;
+  }, [semester]);
 
   // Get the ordered list of all units
   const orderedUnits = useMemo(() => {
@@ -70,6 +98,48 @@ export default function DashboardContent({
     });
     return units;
   }, []);
+
+  // Calculate total videos and questions for the semester
+  useEffect(() => {
+    if (!semester) return;
+
+    let totalVids = 0;
+    let totalQs = 0;
+
+    semester.chapters.forEach(chapter => {
+      chapter.units.forEach(unit => {
+        if (unit.video) {
+          totalVids++;
+          totalQs += unit.video.questions.length;
+        }
+      });
+    });
+
+    setTotalVideos(totalVids);
+    setTotalQuestions(totalQs);
+  }, [semester]);
+
+  // Update progress metrics when completed units change
+  useEffect(() => {
+    if (!semester || !completedUnitMap) return;
+
+    let completedVids = 0;
+    let completedQs = 0;
+
+    semester.chapters.forEach(chapter => {
+      chapter.units.forEach(unit => {
+        if (completedUnitMap[unit.id]) {
+          if (unit.video) {
+            completedVids++;
+            completedQs += unit.video.questions.length;
+          }
+        }
+      });
+    });
+
+    setVideosCompleted(completedVids);
+    setQuestionsAnswered(completedQs);
+  }, [semester, completedUnitMap]);
 
   // Update the next unit info with titles
   const updateNextUnitInfo = useCallback((unitData: { semesterId: string; chapterId: string; unitId: string }) => {
@@ -90,282 +160,221 @@ export default function DashboardContent({
         }
       }
     }
-    // If we get here, we couldn't find the unit
-    console.warn(`Could not find unit info for: ${JSON.stringify(unitData)}`);
     setNextUnitInfo(null);
-  }, [courseData]);
+  }, []);
 
-  // Find the next incomplete unit
-  const findNextIncompleteUnit = useCallback((progress: CompletedUnits | UserProgress) => {
-    console.log("Finding next incomplete unit...");
-    console.log("Progress data:", progress);
-    
-    if (!progress) {
-      console.log("No progress data available");
-      return null;
-    }
-
-    // Get all completed unit IDs with their completion status
-    let unitCompletionMap: Record<string, {
-      unitId: string,
-      chapterId: string,
-      videoCompleted: boolean,
-      questionsCompleted: boolean,
-      fullyCompleted: boolean
-    }> = {};
-    
-    // Handle both CompletedUnits and UserProgress types
-    if ('unitProgress' in progress && progress.unitProgress) {
-      // Handle UserProgress type
-      progress.unitProgress.forEach(up => {
-        if (typeof up === 'object' && 
-            'unitId' in up && 
-            'chapterId' in up && 
-            'videoCompleted' in up && 
-            'questionsCompleted' in up) {
-          unitCompletionMap[up.unitId] = {
-            unitId: up.unitId,
-            chapterId: up.chapterId,
-            videoCompleted: up.videoCompleted,
-            questionsCompleted: up.questionsCompleted,
-            fullyCompleted: up.videoCompleted && up.questionsCompleted
-          };
-        }
-      });
-
-      // Also check individual video and question progress to find partial completions
-      if (progress.videoProgress) {
-        progress.videoProgress.forEach(vp => {
-          if (typeof vp === 'object' && 'unitId' in vp && 'chapterId' in vp && 'completed' in vp) {
-            if (!unitCompletionMap[vp.unitId]) {
-              unitCompletionMap[vp.unitId] = {
-                unitId: vp.unitId,
-                chapterId: vp.chapterId,
-                videoCompleted: vp.completed,
-                questionsCompleted: false,
-                fullyCompleted: false
-              };
-            } else {
-              unitCompletionMap[vp.unitId].videoCompleted = unitCompletionMap[vp.unitId].videoCompleted || vp.completed;
-              unitCompletionMap[vp.unitId].fullyCompleted = unitCompletionMap[vp.unitId].videoCompleted && unitCompletionMap[vp.unitId].questionsCompleted;
-            }
-          }
-        });
-      }
-
-      if (progress.questionProgress) {
-        // Group questions by unit and check if all questions for a unit are completed
-        const unitQuestionMap: Record<string, {total: number, completed: number}> = {};
-        
-        progress.questionProgress.forEach(qp => {
-          if (qp && typeof qp === 'object' && 'unitId' in qp && 'chapterId' in qp && 'correct' in qp) {
-            if (!unitQuestionMap[qp.unitId]) {
-              unitQuestionMap[qp.unitId] = { total: 0, completed: 0 };
-            }
-            
-            unitQuestionMap[qp.unitId].total++;
-            if (qp.correct) {
-              unitQuestionMap[qp.unitId].completed++;
-            }
-          }
-        });
-
-        // For each unit, check if all questions are completed
-        Object.entries(unitQuestionMap).forEach(([unitId, stats]) => {
-          const questionsCompleted = stats.total > 0 && stats.completed === stats.total;
-          
-          if (!unitCompletionMap[unitId]) {
-            // Get the chapter ID from any question entry
-            const questionEntry = progress.questionProgress?.find(qp => 
-              qp && typeof qp === 'object' && 'unitId' in qp && qp.unitId === unitId
-            );
-            
-            const chapterId = questionEntry && typeof questionEntry === 'object' && 'chapterId' in questionEntry 
-              ? questionEntry.chapterId 
-              : '';
-            
-            unitCompletionMap[unitId] = {
-              unitId,
-              chapterId,
-              videoCompleted: false,
-              questionsCompleted,
-              fullyCompleted: false
-            };
-          } else {
-            unitCompletionMap[unitId].questionsCompleted = questionsCompleted;
-            unitCompletionMap[unitId].fullyCompleted = unitCompletionMap[unitId].videoCompleted && questionsCompleted;
-          }
-        });
-      }
-    } else {
-      // Handle CompletedUnits type - this format already represents fully completed units
-      Object.entries(progress as CompletedUnits).forEach(([chapterId, unitIds]) => {
-        unitIds.forEach(unitId => {
-          unitCompletionMap[unitId] = {
-            unitId,
-            chapterId,
-            videoCompleted: true,
-            questionsCompleted: true,
-            fullyCompleted: true
-          };
-        });
-      });
-    }
-
-    console.log("Unit completion map:", unitCompletionMap);
-
-    // First, look for units that have been started but not fully completed
-    // This helps users continue where they left off
-    for (const semester of courseData) {
-      for (const chapter of semester.chapters) {
-        for (const unit of chapter.units) {
-          const unitProgress = unitCompletionMap[unit.id];
-          
-          // If the unit exists in our map but is not fully completed
-          if (unitProgress && !unitProgress.fullyCompleted) {
-            console.log(`Found partially completed unit: ${unit.id} in chapter ${chapter.id}`);
-            return {
-              semesterId: semester.id,
-              chapterId: chapter.id,
-              unitId: unit.id
-            };
-          }
-        }
-      }
-    }
-
-    // If no partially completed units found, look for the first completely untouched unit
-    for (const semester of courseData) {
-      for (const chapter of semester.chapters) {
-        for (const unit of chapter.units) {
-          if (!unitCompletionMap[unit.id]) {
-            console.log(`Found completely untouched unit: ${unit.id} in chapter ${chapter.id}`);
-            return {
-              semesterId: semester.id,
-              chapterId: chapter.id,
-              unitId: unit.id
-            };
-          }
-        }
-      }
-    }
-
-    console.log("All units appear to be completed or in progress");
-    return null;
-  }, [courseData]);
-
-  // Fetch progress data when component mounts and when progress updates
+  // Fetch progress data with optimized loading
   useEffect(() => {
+    let isMounted = true;
+
     const fetchProgress = async () => {
+      if (!user) {
+        if (isMounted) {
+          setIsLoadingProgress(false);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       try {
         const response = await fetch('/api/progress');
-        if (!response.ok) throw new Error('Failed to fetch progress');
-        const data = await response.json();
-        setProgressData(data.progress);
+        if (!response.ok) throw new Error(`Failed to fetch progress: ${response.statusText}`);
+        const data: { completedUnitIds: string[] } = await response.json();
         
-        // Find next incomplete unit with the fresh data
-        const nextUnit = findNextIncompleteUnit(data.progress);
-        setNextIncompleteUnit(nextUnit);
-        
-        if (nextUnit) {
-          updateNextUnitInfo(nextUnit);
-        } else {
-          setNextUnitInfo(null);
-        }
+        if (!isMounted) return;
+
+        // Convert array to map for easier lookup
+        const unitMap: Record<string, boolean> = {};
+        data.completedUnitIds.forEach(id => { unitMap[id] = true; });
+        setCompletedUnitMap(unitMap);
+
+        // Calculate progress percentage
+        const totalUnits = semesters.reduce((count, sem) => 
+          count + sem.chapters.reduce((chapCount, chap) => chapCount + chap.units.length, 0), 0);
+        const completedCount = data.completedUnitIds.length;
+        const progressPercentage = totalUnits > 0 ? (completedCount / totalUnits) * 100 : 0;
+        setCalculatedProgress(progressPercentage);
+
       } catch (error) {
-        console.error('Error fetching progress:', error);
+        console.error("Error fetching progress:", error);
+        if (isMounted) {
+          setCompletedUnitMap({});
+          setCalculatedProgress(0);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoadingProgress(false);
+          setIsLoading(false);
+        }
       }
     };
 
-    setIsLoading(true);
     fetchProgress();
-  }, [findNextIncompleteUnit, updateNextUnitInfo]);
 
-  // Listen for progress update events and refresh the data
-  useEffect(() => {
-    const handleProgressUpdate = () => {
-      console.log("Progress update detected, refreshing data");
-      fetch('/api/progress')
-        .then(res => res.json())
-        .then(data => {
-          setProgressData(data.progress);
-          const nextUnit = findNextIncompleteUnit(data.progress);
-          setNextIncompleteUnit(nextUnit);
-          if (nextUnit) {
-            updateNextUnitInfo(nextUnit);
-          }
-        })
-        .catch(error => {
-          console.error("Failed to fetch updated progress:", error);
-        });
+    return () => {
+      isMounted = false;
     };
+  }, [user, semesters]);
 
-    window.addEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
-    return () => window.removeEventListener(PROGRESS_UPDATED_EVENT, handleProgressUpdate);
-  }, [findNextIncompleteUnit, updateNextUnitInfo]);
+  // Find the next incomplete unit WITHIN THE CURRENT SEMESTER
+  const findNextIncompleteUnit = useCallback(() => {
+    if (!semester || isLoadingProgress) return null;
 
-  // Navigate to the next incomplete unit 
+    for (const chapter of semester.chapters) {
+      for (const unit of chapter.units) {
+        if (!completedUnitMap[unit.id]) {
+          return {
+            semesterId: semester.id,
+            chapterId: chapter.id,
+            unitId: unit.id
+          };
+        }
+      }
+    }
+    return null;
+  }, [semester, completedUnitMap, isLoadingProgress]);
+
+  // Effect to find the next unit when progress loads or changes
+  useEffect(() => {
+    if (!isLoadingProgress) {
+      const nextUnit = findNextIncompleteUnit();
+      setNextIncompleteUnit(nextUnit);
+      if (nextUnit) {
+        updateNextUnitInfo(nextUnit);
+      } else {
+        setNextUnitInfo(null);
+      }
+    }
+  }, [isLoadingProgress, findNextIncompleteUnit, updateNextUnitInfo]);
+
+  // THIS is the function we want to use for both buttons
   const navigateToNextUnit = useCallback(() => {
     if (!nextIncompleteUnit || isLoading || isNavigating) return;
-    
     setIsNavigating(true);
     console.log("Navigating to next unit:", nextIncompleteUnit);
-    
     const { semesterId, chapterId, unitId } = nextIncompleteUnit;
-    
-    // Determine whether to navigate to video or quiz based on progress
+
+    // Look up the unit in courseData
+    let foundUnit = null;
+    for (const sem of courseData) {
+      if (sem.id === semesterId) {
+        for (const chap of sem.chapters) {
+          if (chap.id === chapterId) {
+            foundUnit = chap.units.find(u => u.id === unitId);
+            break;
+          }
+        }
+      }
+    }
+
+    // Determine if the unit has a video and/or quiz
+    const hasVideo = !!foundUnit?.video;
+    const hasQuiz = !!foundUnit?.video?.questions && foundUnit.video.questions.length > 0;
+
+    // Find progress for this unit
     const unitProgress = progressData?.unitProgress?.find(
       up => up.unitId === unitId && up.chapterId === chapterId
     );
-    
     const videoProgress = progressData?.videoProgress?.find(
       vp => vp.unitId === unitId && vp.chapterId === chapterId
     );
-    
-    // If video is not completed, go to video. Otherwise, go to quiz
-    const section = (!videoProgress?.completed) ? 'video' : 'quiz';
-    
-    // Use Next.js router for client-side navigation
+    const videoCompleted = unitProgress?.videoCompleted === true || videoProgress?.completed === true;
+
+    // If video is completed and there is a quiz, go to quiz. Otherwise, go to video.
+    let section: 'video' | 'quiz' = 'video';
+    if (videoCompleted && hasQuiz) {
+      section = 'quiz';
+    } else {
+      section = 'video';
+    }
+
     router.push(`/course/${semesterId}/${chapterId}/${unitId}/${section}`);
-  }, [nextIncompleteUnit, isLoading, isNavigating, progressData, router]);
+    setTimeout(() => setIsNavigating(false), 3000);
+  }, [nextIncompleteUnit, isLoading, isNavigating, router, progressData]);
+
+  // Effect to handle content visibility
+  useEffect(() => {
+    if (!isLoading && !isLoadingProgress) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsContentVisible(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isLoadingProgress]);
+
+  // Animate progress values when they change
+  useEffect(() => {
+    const animation = animate(semesterProgress, calculatedProgress, {
+      duration: 1.5,
+      ease: "easeOut"
+    });
+    return animation.stop;
+  }, [calculatedProgress, semesterProgress]);
+
+  useEffect(() => {
+    const animation = animate(videosProgress, videosCompleted, {
+      duration: 1.5,
+      ease: "easeOut"
+    });
+    return animation.stop;
+  }, [videosCompleted, videosProgress]);
+
+  useEffect(() => {
+    const animation = animate(questionsProgress, questionsAnswered, {
+      duration: 1.5,
+      ease: "easeOut"
+    });
+    return animation.stop;
+  }, [questionsAnswered, questionsProgress]);
 
   return (
-    <div className="relative min-h-screen w-screen">
+    <div className="relative h-screen w-screen px-4 py-4 md:px-8 md:py-8 xl:px-16 xl:py-8 overflow-hidden">
+      {/* Loading Overlay */}
+      {!isContentVisible && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
+          <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 animate-pulse px-8 h-screen">
+            {/* Left Skeleton */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-start h-full space-y-8">
+              <div className="h-16 w-3/4 bg-zinc-700/60 rounded mb-4" />
+              <div className="h-12 w-1/2 bg-zinc-700/60 rounded mb-4" />
+              <div className="space-y-3 w-full max-w-xs">
+                <div className="h-6 w-3/4 bg-zinc-700/60 rounded" />
+                <div className="h-6 w-2/3 bg-zinc-700/60 rounded" />
+                <div className="h-6 w-5/6 bg-zinc-700/60 rounded" />
+                <div className="h-6 w-1/2 bg-zinc-700/60 rounded" />
+              </div>
+            </div>
+            {/* Right Skeleton */}
+            <div className="w-full lg:w-1/2 flex flex-col items-end justify-center h-full gap-8">
+              <div className="bg-zinc-700/60 rounded-2xl w-[500px] h-[320px] mb-8" />
+              <div className="bg-zinc-700/60 rounded-2xl w-[500px] h-[120px]" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="relative z-10">
-        <div className="sm:pt-0 flex flex-col min-h-screen w-full text-white overflow-y-auto">
-          <div
-            className="min-h-screen min-w-screen sm:bg-cover bg-center transition-all duration-1000"
-          >
+      <div className={`relative z-10 transition-opacity duration-500 ${isContentVisible ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="sm:pt-0 flex flex-col h-screen w-full text-white overflow-hidden">
+          <div className="h-screen min-w-screen">
             <h2 className="fixed left-1/2 hidden sm:block top-5 -translate-x-1/2 text-center text-sm sm:text-base md:text-lg lg:text-xl text-zinc-400 font-morion tracking-wider">{semesterTitle}</h2>
             
             {/* Updated overlay with gradient and better opacity */}
-            <div className="min-h-screen flex flex-col lg:flex-row"> 
+            <div className="h-full flex flex-col lg:flex-row"> 
               {/* Main Content */}
               <div className="flex flex-col lg:flex-row w-full">
                 {/* Left Content Section */}
-                <div className="w-full space-y-10 sm:space-y-0 pt-28 sm:pt-0 px-4 py-6 sm:pl-24 lg:w-2/3 flex flex-col justify-center sm:px-8 lg:py-0">
-                  <h1 className="text-5xl pt-16 sm:pt-0 sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-4 sm:mb-6 lg:mb-8 font-neima">
-                    Welcome Back {firstName || 'User'}!
+                <div className="w-full lg:w-2/3 flex flex-col justify-center items-start h-full px-12 lg:pl-24 py-8 space-y-8">
+                  <h1 className="text-5xl pt-4 sm:pt-0 sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-neima">
+                    Welcome Back {user?.firstName || 'User'}!
                   </h1>
-                  <div className="w-full sm:w-3/4 md:w-1/2">
-                    <p className="text-xs font-morion sm:text-sm md:text-base mb-2">Your Progress</p>
-                    <div className="w-full bg-zinc-800 h-1.5 sm:h-2">
-                      <div
-                        className="bg-white h-1.5 sm:h-2"
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Resume Course Button */}
-                  <div className="mt-6 font-morion mb-4">
+                  {/* Main Resume Course Button */}
+                  <div className="font-morion w-full max-w-xs">
                     <button
                       onClick={navigateToNextUnit}
                       disabled={!nextIncompleteUnit || isLoading || isNavigating}
-                      className={`w-full sm:w-auto px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
+                      className={`w-full px-6 py-3 rounded transition-all duration-300 font-medium text-sm md:text-base 
                         ${!nextIncompleteUnit || isLoading || isNavigating 
                           ? 'bg-zinc-700 cursor-not-allowed text-zinc-400' 
                           : 'bg-secondary hover:bg-opacity-80 text-black'}`}
@@ -384,91 +393,76 @@ export default function DashboardContent({
                       )}
                     </button>
                   </div>
-
-
-                  {/* Teachers Section */}
-                  <div className="w-full sm:w-3/4 md:w-1/2">
-                    <p className="font-morion text-xs sm:text-sm md:text-base mb-4">Your Instructors for this semester</p>
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      {instructors.map((instructor, index) => (
-                        <button 
-                          key={instructor.id} 
-                          className="relative group focus:outline-none"
-                          onClick={() => setSelectedInstructor(index + 1)}
-                        >
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-secondary/30 group-hover:border-secondary transition-colors duration-300">
-                            <img 
-                              src={instructor.profileImage} 
-                              alt={instructor.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <p className="text-xs sm:text-sm text-white/80 whitespace-nowrap">{instructor.name}</p>
-                          </div>
-                        </button>
+                  {/* Aside Links */}
+                  <aside className="pt-8 w-full max-w-xs">
+                    <nav className="space-y-3 font-morion text-base">
+                      {([
+                        { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
+                        { text: 'Contact Support', href: `/course/semester-${currentSemester}/support` },
+                        { text: 'Meet Your Instructors', href: `/course/semester-${currentSemester}/instructors` },
+                        { text: 'View Notes', href: `/course/semester-${currentSemester}/notes` }
+                      ] as NavLink[]).map((link, index) => (
+                        <div key={index}>
+                          <CustomLink href={link.href} className="text-white/80 hover:text-white transition-colors">
+                            {link.text}
+                          </CustomLink>
+                        </div>
                       ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Sidebar Section */}
-                <div className="w-full lg:w-1/3 flex flex-col lg:flex-row items-center justify-center py-8 lg:py-0">
-                  <aside className="flex p-5 justify-center w-full">
-                    <nav className="w-full max-w-sm">
-                      <ul className="space-y-3 sm:space-y-4 p-5 bg-black/40 backdrop-blur-md font-morion text-xs sm:text-sm md:text-base lg:text-lg rounded-sm border border-white/10">
-                        {([
-                          { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
-                          {
-                            text: isLoading 
-                              ? 'Loading next unit...'
-                              : isNavigating
-                                ? 'Navigating...'
-                                : nextIncompleteUnit 
-                                  ? `Resume Course` 
-                                  : 'All Units Completed!', 
-                            href: '#', 
-                            onClick: nextIncompleteUnit && !isLoading && !isNavigating ? navigateToNextUnit : undefined,
-                            disabled: !nextIncompleteUnit || isLoading || isNavigating,
-                            className: nextIncompleteUnit && !isLoading && !isNavigating ? 'text-primary hover:text-primary-light font-bold' : 'opacity-70'
-                          },
-                          { text: 'Contact Support', href: `/course/semester-${currentSemester}/support` },
-                          { text: 'Meet Your Instructors', href: `/course/semester-${currentSemester}/instructors` },
-                          { text: 'View Notes', href: `/course/semester-${currentSemester}/notes` }
-                        ] as NavLink[]).map((link, index) => (
-                          <li key={index}>
-                            {link.onClick ? (
-                              <div className="flex flex-col">
-                                <div 
-                                  onClick={link.disabled ? undefined : link.onClick} 
-                                  className={`cursor-pointer ${link.disabled ? 'opacity-50' : ''} ${link.className || ''}`}
-                                >
-                                  <CustomLink href={link.href}>{link.text}</CustomLink>
-                                </div>
-                                {index === 1 && nextUnitInfo && !isLoading && !isNavigating && (
-                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                    {`${nextUnitInfo.chapterTitle}: ${nextUnitInfo.unitTitle}`}
-                                  </span>
-                                )}
-                                {index === 1 && isLoading && (
-                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                    Finding your next unit...
-                                  </span>
-                                )}
-                                {index === 1 && isNavigating && (
-                                  <span className="text-xs text-zinc-400 pl-5 mt-1">
-                                    Taking you to your next unit...
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <CustomLink href={link.href}>{link.text}</CustomLink>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
                     </nav>
                   </aside>
+                </div>
+
+                {/* Right Sidebar Section - Responsive */}
+                <div className="w-full lg:w-1/3 flex flex-col items-end justify-center h-full px-2 sm:px-4 lg:pr-8 py-8 space-y-8">
+                  {/* Progress Stats Window - Responsive */}
+                  <div className="bg-black/20 backdrop-blur-sm p-4 sm:p-6 lg:p-8 rounded-2xl border border-white/10 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-sm xl:w-[400px] shadow-xl flex flex-col justify-center mx-auto">
+                    <div className="space-y-8">
+                      <div>
+                        <p className="text-base text-zinc-400 font-morion mb-2">Semester Progress</p>
+                        <motion.p className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-neima text-secondary">
+                          {roundedSemesterProgress}
+                        </motion.p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row justify-center items-center gap-6 sm:gap-8">
+                        <CircularProgress
+                          value={videosCompleted}
+                          max={totalVideos}
+                          label="Videos"
+                          color="secondary"
+                        />
+                        <CircularProgress
+                          value={questionsAnswered}
+                          max={totalQuestions}
+                          label="Questions"
+                          color="secondary"
+                        />
+                      </div>
+                      <div className="my-4 border-t border-white/20" />
+                      <div>
+                        <p className="font-morion text-sm md:text-lg mb-4">Your Instructors for this semester</p>
+                        <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+                          {instructors.map((instructor, index) => (
+                            <button 
+                              key={instructor.id} 
+                              className="relative group focus:outline-none"
+                              onClick={() => setSelectedInstructor(index + 1)}
+                            >
+                              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-secondary/30 group-hover:border-secondary transition-colors duration-300">
+                                <img 
+                                  src={instructor.profileImage} 
+                                  alt={instructor.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <p className="text-base text-white/80 whitespace-nowrap">{instructor.name}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -481,15 +475,6 @@ export default function DashboardContent({
             instructorId={selectedInstructor || 0}
             semesterId={currentSemester}
           />
-          
-          {/* Sidebar with curriculum tiles - Now will display correct progress */}
-          <div className="fixed z-40 bg-gradient-to-r from-black/50 to-transparent">
-            <Sidebar 
-              courseData={courseData}
-              currentSemester={currentSemester}
-              completedUnits={completedUnits}
-            />
-          </div>
         </div>
       </div>
     </div>

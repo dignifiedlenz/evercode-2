@@ -5,6 +5,9 @@ import { motion, useSpring, useTransform, animate } from "framer-motion";
 import Image from "next/image";
 import { useRouter, useParams } from 'next/navigation';
 import courseData from '@/app/_components/(semester1)/courseData';
+import { useChronologicalMode } from '@/app/context/ChronologicalModeContext';
+import { useProgress, UnitProgress as HookUnitProgress } from '@/app/_components/ProgressClient';
+import { toast } from 'sonner';
 
 interface ScrollNavigatorProps {
   onUpClick: () => void;
@@ -13,6 +16,7 @@ interface ScrollNavigatorProps {
   downLabel?: string;
   threshold?: number;
   currentSection?: 'video' | 'quiz';
+  onScrollProgressChange?: (progress: number) => void;
 }
 
 export default function ScrollNavigator({
@@ -21,370 +25,351 @@ export default function ScrollNavigator({
   upLabel = "Previous",
   downLabel = "Next",
   threshold = 0.75,
-  currentSection = 'video'
+  currentSection = 'video',
+  onScrollProgressChange
 }: ScrollNavigatorProps) {
+  const params = useParams();
+  const semesterId = params.semesterId as string;
+  const chapterId = params.chapterId as string;
+  const unitId = params.unitId as string;
+  
+  console.log('ScrollNavigator rendered with:', { 
+    currentSection, 
+    threshold,
+    semesterId,
+    chapterId,
+    unitId
+  });
+
   const [progress, setProgress] = useState(0.5);
   const [reachedThreshold, setReachedThreshold] = useState(false);
   const [isScrollLocked, setIsScrollLocked] = useState(false);
   const lastDirection = useRef<"up" | "down" | null>(null);
   const accumulatedDelta = useRef(0);
-  const maxDelta = 800;
+  const maxDelta = 800; // Threshold to trigger navigation
   const isAnimating = useRef(false);
   const lastWheelTime = useRef(Date.now());
   const wheelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const scrollVelocityRef = useRef(0);
   const router = useRouter();
-  const { semesterId, chapterId, unitId } = useParams();
   const touchStartY = useRef<number>(0);
   const touchStartX = useRef<number>(0);
   const minSwipeDistance = 50; // minimum swipe distance in pixels
+  const { isChronologicalMode } = useChronologicalMode();
+  const { progress: progressData, loading: isLoadingProgress } = useProgress();
   
-  // Smooth scroll progress with immediate response
   const scrollProgress = useSpring(0.5, {
-    stiffness: 1000, // Much higher stiffness for immediate response
-    damping: 50,     // Higher damping to prevent oscillation
-    mass: 0.1,       // Lower mass for faster response
+    stiffness: 1000,
+    damping: 50,
+    mass: 0.1,
     restDelta: 0.001,
     velocity: scrollVelocityRef.current
   });
 
-  // Transform progress to indicator position (0-100%)
   const indicatorY = useTransform(scrollProgress, [0, 1], [0, 100]);
 
-  // Improved navigation logic with detailed logging
-  const navigateToAdjacentUnit = (direction: 'next' | 'prev') => {
-    // 1. Find the current semester
-    console.log('Current params:', { semesterId, chapterId, unitId });
-    console.log('Course data available:', !!courseData);
-    
+  useEffect(() => {
+    if (onScrollProgressChange) {
+      onScrollProgressChange(progress);
+    }
+  }, [progress, onScrollProgressChange]);
+
+  useEffect(() => {
+     console.log('ScrollNavigator: Progress Data Updated', { 
+         isLoadingProgress, 
+         hasData: !!progressData, 
+         unitCount: progressData?.unitProgress?.length 
+     });
+  }, [progressData, isLoadingProgress]);
+
+  const canNavigate = (direction: 'up' | 'down'): boolean => {
+    if (!isChronologicalMode) return true;
+    if (isLoadingProgress) return false;
+    if (!progressData) {
+      console.warn("Cannot check navigation: No progress data available.");
+      return false;
+    }
+
     const semester = courseData.find(sem => sem.id === semesterId);
-    if (!semester) {
-      console.error('Semester not found:', semesterId);
-      return;
+    if (!semester) return false;
+
+    const chapter = semester.chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return false;
+
+    const currentUnitIndex = chapter.units.findIndex(u => u.id === unitId);
+    if (currentUnitIndex === -1) return false;
+
+    if (direction === 'down') {
+      const currentUnit = chapter.units[currentUnitIndex];
+      const currentUnitProgress = progressData.unitProgress?.find((up: HookUnitProgress) => up.unitId === currentUnit.id);
+      const hasQuestions = currentUnit.video?.questions?.length > 0;
+      
+      if (currentSection === 'video') {
+         const videoCompleted = currentUnitProgress?.videoCompleted === true;
+         console.log('[Chronological Check] Video -> Quiz/Next: Video completed?', videoCompleted);
+         if (!videoCompleted) {
+            toast.error("Complete the video before proceeding.", { position: 'bottom-center' });
+            return false;
+         }
+         if (!hasQuestions) {
+             if (currentUnitIndex < chapter.units.length - 1) {
+               return true; 
+             } else {
+               const chapterIndex = semester.chapters.findIndex(ch => ch.id === chapterId);
+               return chapterIndex < semester.chapters.length - 1;
+             }
+         }
+         return true; 
+      } else {
+         const videoCompleted = currentUnitProgress?.videoCompleted === true;
+         const totalQuestions = currentUnitProgress?.totalQuestions ?? 5;
+         const quizCompleted = !!currentUnitProgress?.questionsCompleted && currentUnitProgress.questionsCompleted >= totalQuestions;
+         const isCurrentUnitComplete = videoCompleted && quizCompleted;
+         console.log('[Chronological Check] Quiz -> Next: Current unit complete?', { videoCompleted, quizCompleted, totalQuestions, isComplete: isCurrentUnitComplete });
+
+         if (!isCurrentUnitComplete) {
+            toast.error("Complete the quiz before proceeding.", { position: 'bottom-center' });
+            return false;
+         }
+
+         if (currentUnitIndex < chapter.units.length - 1) {
+            return true;
+         }
+
+         const chapterIndex = semester.chapters.findIndex(ch => ch.id === chapterId);
+         return chapterIndex < semester.chapters.length - 1;
+      }
+    } else {
+      return true;
     }
+  };
+
+  const navigateToAdjacentUnit = (direction: 'next' | 'prev') => {
+    console.log('Attempting navigation:', direction);
+    const semester = courseData.find(sem => sem.id === semesterId);
+    if (!semester) return;
     
-    // 2. Find the current chapter and its index
-    console.log('Chapters in semester:', semester.chapters.length);
     const chapterIndex = semester.chapters.findIndex(ch => ch.id === chapterId);
-    if (chapterIndex === -1) {
-      console.error('Chapter not found:', chapterId);
-      return;
-    }
+    if (chapterIndex === -1) return;
     
     const currentChapter = semester.chapters[chapterIndex];
-    console.log('Current chapter:', currentChapter.title, 'with', currentChapter.units.length, 'units');
-    
-    // 3. Find the current unit and its index
     const unitIndex = currentChapter.units.findIndex(u => u.id === unitId);
-    if (unitIndex === -1) {
-      console.error('Unit not found:', unitId);
-      return;
-    }
+    if (unitIndex === -1) return;
     
-    console.log('Current unit index:', unitIndex);
-    
-    // 4. Determine target based on direction
+    let targetUrl = '';
+
     if (direction === 'next') {
-      if (unitIndex < currentChapter.units.length - 1) {
-        // Next unit in same chapter
+      if (currentSection === 'video' && currentChapter.units[unitIndex].video?.questions?.length > 0) {
+        targetUrl = `/course/${semesterId}/${chapterId}/${unitId}/quiz`;
+        console.log('Navigating video -> quiz:', targetUrl);
+      } else if (unitIndex < currentChapter.units.length - 1) {
         const nextUnit = currentChapter.units[unitIndex + 1];
-        const unitType = determineUnitType(nextUnit);
-        
-        console.log('Navigating to next unit in same chapter:', nextUnit.id, unitType);
-        router.push(`/course/${semesterId}/${chapterId}/${nextUnit.id}/${unitType}`);
+        targetUrl = `/course/${semesterId}/${chapterId}/${nextUnit.id}/video`;
+        console.log('Navigating quiz -> next unit video:', targetUrl);
       } else if (chapterIndex < semester.chapters.length - 1) {
-        // First unit of next chapter
         const nextChapter = semester.chapters[chapterIndex + 1];
         if (nextChapter.units.length > 0) {
           const firstUnit = nextChapter.units[0];
-          const unitType = determineUnitType(firstUnit);
-          
-          console.log('Navigating to first unit of next chapter:', nextChapter.id, firstUnit.id, unitType);
-          router.push(`/course/${semesterId}/${nextChapter.id}/${firstUnit.id}/${unitType}`);
+          targetUrl = `/course/${semesterId}/${nextChapter.id}/${firstUnit.id}/video`;
+          console.log('Navigating last unit -> next chapter video:', targetUrl);
+        } else {
+           console.log("Next chapter has no units.");
         }
+      } else {
+          console.log("Already at the last unit of the last chapter.");
       }
     } else {
-      // Previous direction
-      if (unitIndex > 0) {
-        // Previous unit in same chapter
+      if (currentSection === 'quiz') {
+        targetUrl = `/course/${semesterId}/${chapterId}/${unitId}/video`;
+        console.log('Navigating quiz -> video:', targetUrl);
+      } else if (unitIndex > 0) {
         const prevUnit = currentChapter.units[unitIndex - 1];
-        const unitType = determineUnitType(prevUnit);
-        
-        console.log('Navigating to previous unit in same chapter:', prevUnit.id, unitType);
-        router.push(`/course/${semesterId}/${chapterId}/${prevUnit.id}/${unitType}`);
+        const section = prevUnit.video?.questions?.length > 0 ? 'quiz' : 'video';
+        targetUrl = `/course/${semesterId}/${chapterId}/${prevUnit.id}/${section}`;
+        console.log(`Navigating video -> prev unit ${section}:`, targetUrl);
       } else if (chapterIndex > 0) {
-        // Last unit of previous chapter
         const prevChapter = semester.chapters[chapterIndex - 1];
         if (prevChapter.units.length > 0) {
           const lastUnit = prevChapter.units[prevChapter.units.length - 1];
-          const unitType = determineUnitType(lastUnit);
-          
-          console.log('Navigating to last unit of previous chapter:', prevChapter.id, lastUnit.id, unitType);
-          router.push(`/course/${semesterId}/${prevChapter.id}/${lastUnit.id}/${unitType}`);
+          const section = lastUnit.video?.questions?.length > 0 ? 'quiz' : 'video';
+          targetUrl = `/course/${semesterId}/${prevChapter.id}/${lastUnit.id}/${section}`;
+          console.log(`Navigating first unit -> prev chapter last unit ${section}:`, targetUrl);
+        } else {
+            console.log("Previous chapter has no units.");
         }
+      } else {
+          console.log("Already at the first unit of the first chapter.");
       }
     }
-  };
-  
-  // Helper function to determine the unit type (video or quiz)
-  const determineUnitType = (unit: any): string => {
-    // Check various possible structures based on your courseData format
-    if (unit.type) {
-      return unit.type; // If unit has an explicit type property
-    } else if (unit.video) {
-      return 'video';
-    } else if (unit.quiz || unit.questions) {
-      return 'quiz';
-    } else if (unit.content_type) {
-      return unit.content_type.toLowerCase();
-    } else {
-      // Fallback to default type
-      console.warn('Could not determine unit type, defaulting to video', unit);
-      return 'video';
+
+    if (targetUrl) {
+       router.push(targetUrl);
     }
   };
-  
+
   const handleScrollUp = () => {
-    navigateToAdjacentUnit('prev');
-  };
-  
-  const handleScrollDown = () => {
-    navigateToAdjacentUnit('next');
-  };
-
-  // Function to snap back to middle immediately
-  const snapToMiddle = useCallback(() => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-    
-    accumulatedDelta.current = 0;
-    setProgress(0.5);
-    scrollVelocityRef.current = 0;
-    
-    // Immediate snap animation
-    animate(scrollProgress, 0.5, {
-      type: "spring",
-      stiffness: 1000,
-      damping: 50,
-      mass: 0.1,
-      restDelta: 0.001,
-      velocity: 0,
-      onComplete: () => {
-        isAnimating.current = false;
-      }
-    });
-  }, [scrollProgress]);
-
-  // Function to handle page transition
-  const handlePageTransition = useCallback((direction: "up" | "down") => {
-    setIsScrollLocked(true);
-    if (direction === "up") {
-      onUpClick();
-    } else {
-      onDownClick();
+    if (canNavigate('up')) {
+      onUpClick ? onUpClick() : navigateToAdjacentUnit('prev');
     }
-    snapToMiddle();
-    
-    // Unlock scrolling after 1 second
-    setTimeout(() => {
-      setIsScrollLocked(false);
-    }, 1000);
-  }, [onUpClick, onDownClick, snapToMiddle]);
+  };
 
-  // Add touch handlers
-  const handleTouchStart = (e: TouchEvent) => {
+  const handleScrollDown = () => {
+    if (canNavigate('down')) {
+      onDownClick ? onDownClick() : navigateToAdjacentUnit('next');
+    }
+  };
+
+  const updateProgress = (deltaY: number) => {
     if (isAnimating.current || isScrollLocked) return;
-    
+
+    const sensitivity = 0.0015;
+    let newProgress = progress - deltaY * sensitivity;
+    newProgress = Math.max(0, Math.min(1, newProgress));
+
+    setProgress(newProgress);
+    scrollProgress.set(newProgress);
+
+    if (newProgress <= 1 - threshold && lastDirection.current !== "up") {
+        console.log("UP Threshold Reached");
+        setReachedThreshold(true);
+        lastDirection.current = "up";
+        handleScrollUp();
+        lockScrollTemporarily();
+    } else if (newProgress >= threshold && lastDirection.current !== "down") {
+        console.log("DOWN Threshold Reached");
+        setReachedThreshold(true);
+        lastDirection.current = "down";
+        handleScrollDown(); 
+        lockScrollTemporarily();
+    } else if (newProgress > 1 - threshold && newProgress < threshold) {
+        setReachedThreshold(false);
+        lastDirection.current = null;
+    }
+  };
+
+  const lockScrollTemporarily = () => {
+    setIsScrollLocked(true);
+    isAnimating.current = true;
+    animate(scrollProgress, 0.5, {
+        type: "spring",
+        stiffness: 100,
+        damping: 20,
+        onComplete: () => {
+            isAnimating.current = false;
+            setIsScrollLocked(false);
+            setProgress(0.5);
+            lastDirection.current = null; 
+            setReachedThreshold(false);
+        }
+    });
+  };
+
+  const handleTouchStart = (e: TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     touchStartX.current = e.touches[0].clientX;
+    accumulatedDelta.current = 0;
   };
 
   const handleTouchMove = (e: TouchEvent) => {
     if (isAnimating.current || isScrollLocked) return;
-    
-    const touchY = e.touches[0].clientY;
-    const touchX = e.touches[0].clientX;
-    
-    // Calculate deltas
-    const deltaY = touchStartY.current - touchY;
-    const deltaX = touchStartX.current - touchX;
-    
-    // Only proceed if vertical swipe is more significant than horizontal
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      e.preventDefault(); // Prevent default scrolling
-      
-      // Convert touch movement to scroll delta (similar to wheel event)
-      accumulatedDelta.current = Math.max(
-        -maxDelta,
-        Math.min(maxDelta, deltaY * 2)
-      );
-      
-      // Convert accumulated delta to progress (0-1)
-      const newProgress = (accumulatedDelta.current + maxDelta) / (maxDelta * 2);
-      setProgress(newProgress);
-      scrollProgress.set(newProgress);
-      
-      // Check threshold
-      const hasReachedThreshold = newProgress > 0.85 || newProgress < 0.15;
-      setReachedThreshold(hasReachedThreshold);
+
+    const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
+    const deltaY = touchStartY.current - currentY;
+    const deltaX = touchStartX.current - currentX;
+
+    if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+        e.preventDefault();
+        accumulatedDelta.current += deltaY;
+        updateProgress(deltaY);
+        touchStartY.current = currentY;
+        touchStartX.current = currentX;
     }
   };
 
   const handleTouchEnd = (e: TouchEvent) => {
     if (isAnimating.current || isScrollLocked) return;
-    
-    const touchY = e.changedTouches[0].clientY;
-    const touchX = e.changedTouches[0].clientX;
-    
-    const deltaY = touchStartY.current - touchY;
-    const deltaX = touchStartX.current - touchX;
-    
-    // Only trigger if vertical swipe is more significant than horizontal
-    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) >= minSwipeDistance) {
-      const direction = deltaY > 0 ? "down" : "up";
-      handlePageTransition(direction);
-    } else {
-      // If swipe wasn't long enough, snap back to middle
-      snapToMiddle();
+
+    if (!reachedThreshold) {
+        isAnimating.current = true;
+        animate(scrollProgress, 0.5, {
+            type: "spring",
+            stiffness: 100,
+            damping: 20,
+            onComplete: () => {
+                isAnimating.current = false;
+                setProgress(0.5);
+            }
+        });
     }
+    accumulatedDelta.current = 0;
   };
 
-  // Add touch event listeners
   useEffect(() => {
-    const element = document.documentElement;
-    
-    element.addEventListener("touchstart", handleTouchStart as any, { passive: false });
-    element.addEventListener("touchmove", handleTouchMove as any, { passive: false });
-    element.addEventListener("touchend", handleTouchEnd as any, { passive: false });
-    
-    return () => {
-      element.removeEventListener("touchstart", handleTouchStart as any);
-      element.removeEventListener("touchmove", handleTouchMove as any);
-      element.removeEventListener("touchend", handleTouchEnd as any);
-    };
-  }, [handlePageTransition, snapToMiddle, isScrollLocked]);
-
-  useEffect(() => {
-    let lastDelta = 0;
-    let lastTime = Date.now();
-
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      
-      if (isAnimating.current || isScrollLocked) return;
-      
-      const currentTime = Date.now();
-      const deltaTime = currentTime - lastTime;
-      lastTime = currentTime;
-      
-      // Calculate scroll velocity
-      const currentDelta = e.deltaY;
-      scrollVelocityRef.current = (currentDelta - lastDelta) / Math.max(deltaTime, 1);
-      lastDelta = currentDelta;
-      
-      // Clear existing timeout
-      if (wheelTimeoutRef.current) {
-        clearTimeout(wheelTimeoutRef.current);
-      }
-      
-      // Accumulate the delta with velocity influence
-      accumulatedDelta.current = Math.max(
-        -maxDelta,
-        Math.min(maxDelta, accumulatedDelta.current + e.deltaY)
-      );
-      
-      // Convert accumulated delta to progress (0-1)
-      const newProgress = (accumulatedDelta.current + maxDelta) / (maxDelta * 2);
-      setProgress(newProgress);
-      scrollProgress.set(newProgress);
-      lastWheelTime.current = currentTime;
-
-      // Check if we've reached the threshold
-      const hasReachedThreshold = newProgress > 0.85 || newProgress < 0.15;
-      setReachedThreshold(hasReachedThreshold);
-
-      if (hasReachedThreshold) {
-        const direction = newProgress > 0.5 ? "down" : "up";
-        if (direction !== lastDirection.current) {
-          lastDirection.current = direction;
-          handlePageTransition(direction);
-        }
-      } else {
-        lastDirection.current = null;
-        // Set timeout to check for inactivity - shorter delay
-        wheelTimeoutRef.current = setTimeout(() => {
-          if (Math.abs(scrollVelocityRef.current) < 0.1) {
-            snapToMiddle();
-          }
-        }, 50); // Much shorter timeout for immediate response
-      }
+        e.preventDefault();
+        updateProgress(e.deltaY);
     };
 
-    window.addEventListener("wheel", handleWheel, { passive: false });
+    const element = document.documentElement;
+    element.addEventListener('wheel', handleWheel, { passive: false });
+    element.addEventListener('touchstart', handleTouchStart as any, { passive: false });
+    element.addEventListener('touchmove', handleTouchMove as any, { passive: false });
+    element.addEventListener('touchend', handleTouchEnd as any, { passive: false });
+
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      if (wheelTimeoutRef.current) {
-        clearTimeout(wheelTimeoutRef.current);
-      }
+        element.removeEventListener('wheel', handleWheel);
+        element.removeEventListener('touchstart', handleTouchStart as any);
+        element.removeEventListener('touchmove', handleTouchMove as any);
+        element.removeEventListener('touchend', handleTouchEnd as any);
     };
-  }, [scrollProgress, handlePageTransition, snapToMiddle, isScrollLocked]);
+  }, [progress, reachedThreshold, isScrollLocked, isAnimating.current, isChronologicalMode, progressData, isLoadingProgress]);
 
   return (
-    <div className="fixed right-8 top-1/2 -translate-y-1/2 h-72 flex flex-col items-center touch-none">
-      <div className="flex flex-col items-center h-full justify-between">
-        {/* Up Arrow */}
-        <button 
-          onClick={() => !isScrollLocked && handlePageTransition("up")}
-          className="flex items-center justify-center h-10 mb-2 text-white/70 hover:text-white transition-colors"
-          aria-label={currentSection === 'video' ? 'Previous' : 'Video'}
-          disabled={isScrollLocked}
-        >
-          <Image 
-            src="/EvermodeArrow.svg" 
-            alt="Up" 
-            width={24} 
-            height={10} 
-            className="transform -rotate-90"
-          />
-        </button>
+    <div className="fixed right-5 sm:right-12 inset-y-0 flex flex-col items-center justify-center z-50 pointer-events-none">
+      <motion.button
+        onClick={handleScrollUp}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="pointer-events-auto mb-4 p-2 rounded-full text-white/50 hover:text-white/80 transition-colors"
+        aria-label={upLabel}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: indicatorY.get() < 50 ? 1 : 0.5, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M18.25 14.75L12 8.5L5.75 14.75"></path>
+          </svg>
+          <span className="sr-only">{upLabel}</span>
+      </motion.button>
 
-        {/* Line Markers */}
-        <div className="relative min-h-40 w-6 flex flex-col justify-evenly">
-          {Array(7).fill(0).map((_, i) => (
-            <div 
-              key={i}
-              className="w-6 h-[1px] bg-white/30"
-            />
-          ))}
-
-          {/* Moving Indicator Line */}
-          <motion.div
-            className={`absolute left-0 w-6 h-[2px] ${
-              reachedThreshold ? "bg-secondary" : "bg-white"
-            }`}
-            style={{ 
-              top: `${indicatorY.get()}%`, 
-              transform: 'translateY(-50%)',
-            }}
-          />
-        </div>
-
-        {/* Down Arrow */}
-        <button
-          onClick={() => !isScrollLocked && handlePageTransition("down")}
-          className="flex items-center justify-center h-10 mt-2 text-white/70 hover:text-white transition-colors"
-          aria-label={currentSection === 'video' ? 'Quiz' : 'Next'}
-          disabled={isScrollLocked}
-        >
-          <Image 
-            src="/EvermodeArrow.svg" 
-            alt="Down" 
-            width={24} 
-            height={10}
-            className="transform rotate-90"
-          />
-        </button>
+      <div className="h-32 w-[2px] bg-white/20 rounded-full relative overflow-hidden">
+        <motion.div
+          className="absolute left-0 w-full h-full bg-white origin-bottom"
+          style={{
+            scaleY: useTransform(indicatorY, [0, 100], [0, 1]),
+            top: useTransform(indicatorY, [0, 100], [100, 0], { clamp: false }) + '%',
+            height: '100%'
+          }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
       </div>
+
+      <motion.button
+        onClick={handleScrollDown}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="pointer-events-auto mt-4 p-2 rounded-full text-white/50 hover:text-white/80 transition-colors"
+        aria-label={downLabel}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: indicatorY.get() > 50 ? 1 : 0.5, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+         <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5.75 9.75L12 16L18.25 9.75"></path>
+          </svg>
+         <span className="sr-only">{downLabel}</span>
+      </motion.button>
     </div>
   );
 } 

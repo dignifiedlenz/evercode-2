@@ -4,13 +4,10 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { Logo } from "./_media/logo";
 import SemesterSelector from "./SemesterSelector";
-import { CompletedUnits } from "@/types/course";
 
-interface LogoSectionProps {
-  completedUnits: CompletedUnits;
-}
+interface LogoSectionProps { }
 
-export default function LogoSection({ completedUnits }: LogoSectionProps) {
+export default function LogoSection({ }: LogoSectionProps) {
   const router = useRouter();
   const params = useParams();
   const semesterId = typeof params.semesterId === 'string' ? params.semesterId : '';

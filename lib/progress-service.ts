@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 // Custom event name for progress updates
 const PROGRESS_UPDATED_EVENT = 'progress-updated';
@@ -49,149 +50,160 @@ export interface UnitProgress {
   unitId: string;
   chapterId: string;
   videoCompleted: boolean;
-  questionsCompleted: boolean;
+  questionsCompleted: number;
+  totalQuestions: number;
   completed: boolean;
   lastAccessed: Date;
 }
 
-/**
- * Save video progress to the database
- */
-export async function saveVideoProgress(
-  unitId: string,
-  chapterId: string,
-  videoId: string,
-  currentTime: number,
-  duration: number
-): Promise<void> {
-  if (!unitId || !chapterId || !videoId) {
-    console.error("Missing required parameters for video progress");
-    return;
-  }
+// Types
+interface VideoProgressData {
+  unitId: string;
+  currentTime: number;
+  duration: number;
+  completed: boolean;
+}
 
+interface QuestionProgressData {
+  questionId: string;
+  unitId: string;
+  correct: boolean;
+}
+
+interface UnitProgressData {
+  unitId: string;
+  videoCompleted: boolean;
+  questionsCompleted: number;
+}
+
+/**
+ * Save video progress to the database via API
+ */
+export async function saveVideoProgress(data: VideoProgressData) {
   try {
-    const payload = {
-      type: 'video',
-      data: {
-        videoId,
-        unitId,
-        chapterId,
-        currentTime,
-        duration,
-        completed: currentTime >= duration * 0.9 // Mark as complete if watched 90%
-      }
-    };
+    const response = await fetch('/api/progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'video',
+        data
+      }),
+    });
     
-    await axios.post('/api/progress', payload);
-    
-    // Notify that progress has been updated
-    notifyProgressUpdate();
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Failed to save video progress:", error.response?.data || error.message);
-    } else {
-      console.error("Failed to save video progress:", error);
+    if (!response.ok) {
+      throw new Error('Failed to save video progress');
     }
+    
+    notifyProgressUpdate();
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving video progress:', error);
+    throw error;
   }
 }
 
 /**
- * Save question progress to the database
+ * Save question progress to the database via API
  */
-export async function saveQuestionProgress(
-  unitId: string,
-  chapterId: string,
-  questionId: string,
-  correct: boolean
-): Promise<void> {
-  if (!unitId || !chapterId || !questionId) {
-    console.error("Missing required parameters for question progress");
-    return;
-  }
-
+export async function saveQuestionProgress(data: QuestionProgressData) {
   try {
-    const payload = {
-      type: 'question',
-      data: {
-        questionId,
-        unitId,
-        chapterId,
-        answered: true,
-        correct
-      }
-    };
+    const response = await fetch('/api/progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'question',
+        data
+      }),
+    });
     
-    await axios.post('/api/progress', payload);
-    
-    // Notify that progress has been updated
-    notifyProgressUpdate();
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Failed to save question progress:", error.response?.data || error.message);
-    } else {
-      console.error("Failed to save question progress:", error);
+    if (!response.ok) {
+      throw new Error('Failed to save question progress');
     }
+    
+    notifyProgressUpdate();
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving question progress:', error);
+    throw error;
   }
 }
 
 /**
- * Update unit progress
+ * Update unit progress via API
  */
-export async function saveUnitProgress(
-  unitId: string,
-  chapterId: string,
-  videoCompleted?: boolean,
-  questionsCompleted?: boolean
-): Promise<void> {
-  if (!unitId || !chapterId) {
-    console.error("Missing required parameters for unit progress");
-    return;
-  }
-
+export async function saveUnitProgress(data: UnitProgressData) {
   try {
-    // Get current user data from the session
-    const userResponse = await axios.get('/api/auth/session');
-    const user = userResponse.data?.user;
-
-    const payload = {
-      type: 'unit',
-      data: {
-        unitId,
-        chapterId,
-        firstName: user?.firstName,
-        lastName: user?.lastName,
-        ...(videoCompleted !== undefined && { videoCompleted }),
-        ...(questionsCompleted !== undefined && { questionsCompleted })
-      }
-    };
+    const response = await fetch('/api/progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'unit',
+        data
+      }),
+    });
     
-    await axios.post('/api/progress', payload);
-    
-    // Notify that progress has been updated
-    notifyProgressUpdate();
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Failed to save unit progress:", error.response?.data || error.message);
-    } else {
-      console.error("Failed to save unit progress:", error);
+    if (!response.ok) {
+      throw new Error('Failed to save unit progress');
     }
+    
+    notifyProgressUpdate();
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving unit progress:', error);
+    throw error;
   }
 }
 
 /**
- * Get user progress from the database
+ * Get user progress from the API
  */
-export async function getUserProgress(): Promise<UserProgress | null> {
+export async function getUserProgress() {
   try {
-    const response = await axios.get('/api/progress');
-    return response.data.progress;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Failed to get user progress:", error.response?.data || error.message);
-    } else {
-      console.error("Failed to get user progress:", error);
+    const response = await fetch('/api/progress', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch progress');
     }
-    return null;
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching progress:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reset user progress via API
+ */
+export async function resetUserProgress() {
+  try {
+    const response = await fetch('/api/progress', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to reset progress');
+    }
+    
+    notifyProgressUpdate();
+    return await response.json();
+  } catch (error) {
+    console.error('Error resetting progress:', error);
+    throw error;
   }
 }
 
@@ -205,10 +217,20 @@ export function isUnitComplete(
   if (!userProgress || !userProgress.unitProgress) return false;
   
   const unitProgress = userProgress.unitProgress.find(
-    (up: UnitProgress) => up.unitId === unitId
+    (up) => up.unitId === unitId
   );
   
-  return unitProgress ? unitProgress.completed : false;
+  // A unit is complete if both video is completed and questions are completed
+  if (!unitProgress) return false;
+  
+  // Consider a unit complete if video is done and all questions are answered
+  const videoComplete = unitProgress.videoCompleted === true;
+  
+  // If the unit has totalQuestions defined, use that value for comparison
+  const totalQuestions = unitProgress.totalQuestions || 5;
+  const quizComplete = unitProgress.questionsCompleted >= totalQuestions;
+  
+  return videoComplete && quizComplete;
 }
 
 /**
@@ -222,7 +244,7 @@ export function getVideoProgress(
   if (!userProgress || !userProgress.videoProgress) return 0;
   
   const videoProgress = userProgress.videoProgress.find(
-    (vp: VideoProgress) => vp.unitId === unitId && vp.videoId === videoId
+    (vp) => vp.unitId === unitId && vp.videoId === videoId
   );
   
   return videoProgress ? videoProgress.currentTime : 0;
@@ -239,7 +261,7 @@ export function getQuestionProgress(
   if (!userProgress || !userProgress.questionProgress) return [];
   
   return userProgress.questionProgress.filter(
-    (qp: QuestionProgress) => qp.unitId === unitId && qp.chapterId === chapterId
+    (qp) => qp.unitId === unitId && qp.chapterId === chapterId
   );
 }
 
@@ -252,55 +274,41 @@ export async function markAllQuestionsCompleted(
   questionIds: string[]
 ): Promise<void> {
   try {
-    for (const questionId of questionIds) {
-      await saveQuestionProgress(unitId, chapterId, questionId, true);
-    }
+    const payload = {
+      type: 'questions',
+      data: {
+        unitId,
+        chapterId,
+        questionIds,
+        completed: true
+      }
+    };
     
-    await saveUnitProgress(unitId, chapterId, undefined, true);
+    // Make API request to mark questions as completed
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    notifyProgressUpdate();
   } catch (error) {
-    console.error("Failed to mark all questions as completed:", error);
+    console.error('Error marking questions as completed:', error);
+    throw error;
   }
 }
 
 /**
- * Reset all user progress
+ * Calculate overall course progress
  */
-export async function resetUserProgress(): Promise<{success: boolean, details?: any}> {
-  try {
-    console.log("Calling reset progress API");
-    const response = await axios.delete('/api/progress/reset');
-    
-    if (response.data.success) {
-      // Log detailed information about what was reset
-      console.log("Progress reset successful with details:", response.data.details);
-      
-      // Notify that progress has been updated
-      notifyProgressUpdate();
-      
-      return {
-        success: true,
-        details: response.data.details
-      };
-    }
-    
-    console.error("Reset progress failed:", response.data);
-    return {
-      success: false,
-      details: response.data
-    };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Failed to reset user progress:", error.response?.data || error.message);
-      return {
-        success: false,
-        details: error.response?.data || error.message
-      };
-    } else {
-      console.error("Failed to reset user progress:", error);
-      return {
-        success: false,
-        details: String(error)
-      };
-    }
-  }
+export function calculateOverallProgress(userProgress: UserProgress | null): number {
+  if (!userProgress || !userProgress.unitProgress) return 0;
+  
+  const totalUnits = userProgress.unitProgress.length;
+  if (totalUnits === 0) return 0;
+  
+  const completedUnits = userProgress.unitProgress.filter(up => !!up.completed).length;
+  return (completedUnits / totalUnits) * 100;
 } 

@@ -3,16 +3,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
 import { Semester } from "@/types/course";
 import CustomLink from "./CustomLink";
 import { getUserProgress } from '@/lib/progress-service';
-import Image from "next/image";
+import { useTransitionRouter } from 'next-view-transitions';
+import { usePathname } from 'next/navigation';
 
 interface SidebarProps {
   courseData: Semester[];
-  currentSemester: number;
-  completedUnits?: Record<string, string[]>;
+  completedUnits?: Record<string, boolean>;
 }
 
 interface ChapterProgress {
@@ -20,11 +19,19 @@ interface ChapterProgress {
   percentage: number;
 }
 
-export default function Sidebar({ courseData, currentSemester, completedUnits }: SidebarProps) {
+export default function Sidebar({ courseData, completedUnits }: SidebarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [chapterProgress, setChapterProgress] = useState<ChapterProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useTransitionRouter();
+  const pathname = usePathname();
+
+  // Extract current semester from URL
+  const currentSemester = useMemo(() => {
+    const match = pathname.match(/semester-(\d+)/);
+    return match ? parseInt(match[1], 10) : 1; // Default to semester 1 if not found
+  }, [pathname]);
 
   // Get the current semester data based on the selected semester - memoized
   const currentSemesterData = useMemo(() => 
@@ -35,6 +42,11 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
   // Memoized function to calculate progress from API data
   const calculateProgressFromAPI = useCallback((progress: any) => {
     if (!currentSemesterData) return [];
+    
+    // Get all unit IDs for this semester to filter progress data
+    const semesterUnitIds = new Set(
+      currentSemesterData.chapters.flatMap(ch => ch.units.map(u => u.id))
+    );
     
     return currentSemesterData.chapters.map(chapter => {
       let totalPoints = 0;
@@ -47,19 +59,21 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
         // Each question is worth 1 point
         totalPoints += unit.video.questions.length;
 
-        // Check video completion
+        // Check video completion - only count if unit belongs to this semester
         const videoCompleted = progress.videoProgress?.some(
           (vp: any) => vp.unitId === unit.id && 
                 vp.chapterId === chapter.id && 
-                vp.completed
+                vp.completed &&
+                semesterUnitIds.has(unit.id)
         );
         if (videoCompleted) earnedPoints += 5;
 
-        // Check question completion
+        // Check question completion - only count if unit belongs to this semester
         const completedQuestions = progress.questionProgress?.filter(
           (qp: any) => qp.unitId === unit.id && 
                 qp.chapterId === chapter.id && 
-                qp.correct
+                qp.correct &&
+                semesterUnitIds.has(unit.id)
         ).length || 0;
         earnedPoints += completedQuestions;
       });
@@ -72,18 +86,19 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
     });
   }, [currentSemesterData]);
 
-  // Memoized function to calculate progress from completed units
+  // Updated function to calculate progress from the correct completedUnits format
   const calculateProgressFromCompletedUnits = useCallback(() => {
     if (!currentSemesterData) return [];
     
     return currentSemesterData.chapters.map(chapter => {
-      let totalUnits = chapter.units.length;
+      const totalUnits = chapter.units.length;
       let completedUnitCount = 0;
       
-      // Count completed units for this chapter
-      if (completedUnits && completedUnits[chapter.id]) {
+      // Count completed units using the new format
+      if (completedUnits) {
         chapter.units.forEach(unit => {
-          if (completedUnits[chapter.id].includes(unit.id)) {
+          // Check if the unit ID exists as a key and is true
+          if (completedUnits[unit.id]) { 
             completedUnitCount++;
           }
         });
@@ -172,8 +187,7 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
       const progressPercentage = progress?.percentage || 0;
 
       return (
-        <Link 
-          href={`/course/semester-${currentSemester}/${chapter.id}`} 
+        <div 
           key={chapter.id}
           onClick={() => {
             // Close menu when a link is clicked
@@ -182,6 +196,40 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
               setIsMenuOpen(false);
               setIsAnimating(false);
             }, 800);
+
+            // Use transition router for navigation
+            const url = `/course/semester-${currentSemester}/${chapter.id}`;
+            router.push(url, {
+              onTransitionReady: () => {
+                // Animate out (old page)
+                document.documentElement.animate(
+                  [
+                    { transform: 'translateY(0)', opacity: 1 },
+                    { transform: 'translateY(-100%)', opacity: 0 }
+                  ],
+                  {
+                    duration: 1000,
+                    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+                    fill: "forwards",
+                    pseudoElement: "::view-transition-old(content)"
+                  }
+                );
+
+                // Animate in (new page)
+                document.documentElement.animate(
+                  [
+                    { transform: 'translateY(100%)', opacity: 0 },
+                    { transform: 'translateY(0)', opacity: 1 }
+                  ],
+                  {
+                    duration: 1000,
+                    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+                    fill: "forwards",
+                    pseudoElement: "::view-transition-new(content)"
+                  }
+                );
+              }
+            });
           }}
           className="block relative w-full flex-1 overflow-hidden group transition-all duration-500 hover:scale-[1.02] tile-animate bg-gradient-to-b from-black/90 to-black/10"
           style={{ 
@@ -229,10 +277,10 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
               </div>
             </div>
           </div>
-        </Link>
+        </div>
       );
     });
-  }, [currentSemesterData, currentSemester, chapterProgress, isAnimating]);
+  }, [currentSemesterData, currentSemester, chapterProgress, isAnimating, router]);
 
   return (
     <>

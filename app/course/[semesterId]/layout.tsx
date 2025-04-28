@@ -20,7 +20,7 @@ export default function SemesterLayout({ children, params }: LayoutProps) {
   const backgroundImage = semester?.backgroundImage || '/540598ldsdl.jpg';
 
   return (
-    <div className="relative min-h-screen w-screen bg-black/65">
+    <div className="relative min-h-screen w-screen bg-black/75">
       {/* Background Image */}
       <div 
         className="fixed inset-0 w-full h-full"
@@ -44,7 +44,7 @@ export default function SemesterLayout({ children, params }: LayoutProps) {
       <div 
         className="fixed inset-0 w-full h-full"
         style={{
-          background: `radial-gradient(circle at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.85) 100%)`,
+          background: `radial-gradient(circle at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.95) 100%)`,
           position: 'fixed',
           top: 0,
           left: 0,
