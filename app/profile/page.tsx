@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Suspense } from "react"; 
+import { Suspense } from "react";
+import { supabase } from "@/lib/supabase";
+
+export const dynamic = 'force-dynamic';
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // Keep local state for first/last name
@@ -19,19 +22,33 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // If user is not authenticated, redirect or show loading
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/signin");
-    }
-  }, [status, router]);
+    // Check if user is authenticated
+    const checkUser = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (!session) {
+          router.push("/signin");
+          return;
+        }
+        
+        setUser(session.user);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error checking session:", error);
+        router.push("/signin");
+      }
+    };
 
-  // Pre-fill fields with existing user data if you fetch them
-  // Or you can fetch from an API route. For example:
+    checkUser();
+  }, [router]);
+
+  // Pre-fill fields with existing user data
   useEffect(() => {
     async function fetchUserData() {
-      // We'll just assume 'session.user.email' is available
-      if (session?.user?.email) {
+      if (user?.email) {
         try {
           const res = await fetch("/api/user/profile");
           if (!res.ok) throw new Error("Failed to load user profile");
@@ -39,28 +56,26 @@ export default function ProfilePage() {
           setFirstName(data.firstName || "");
           setLastName(data.lastName || "");
         } catch (err: unknown) {
-            if (err instanceof Error) {
-              console.error(err.message);
-              setErrorMsg(err.message);
-            } else {
-              console.error("Unexpected error:", err);
-              setErrorMsg("An unexpected error occurred.");
-            }
+          if (err instanceof Error) {
+            console.error(err.message);
+            setErrorMsg(err.message);
+          } else {
+            console.error("Unexpected error:", err);
+            setErrorMsg("An unexpected error occurred.");
           }
+        }
       }
     }
-    if (status === "authenticated") {
+    if (user) {
       fetchUserData();
     }
-  }, [session, status]);
+  }, [user]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
-    // If newPassword is provided, user wants to change password
-    // oldPassword is mandatory in that case (or whatever your policy is)
     try {
       const res = await fetch("/api/user/update", {
         method: "POST",
@@ -78,104 +93,95 @@ export default function ProfilePage() {
         throw new Error(data.error || "Something went wrong");
       }
       setSuccessMsg("Profile updated successfully!");
-      // Optionally clear the password fields
       setOldPassword("");
       setNewPassword("");
     } catch (err: unknown) {
-        if (err instanceof Error) {
-          console.error(err.message);
-          setErrorMsg(err.message);
-        } else {
-          console.error("Unexpected error:", err);
-          setErrorMsg("An unexpected error occurred.");
-        }
+      if (err instanceof Error) {
+        console.error(err.message);
+        setErrorMsg(err.message);
+      } else {
+        console.error("Unexpected error:", err);
+        setErrorMsg("An unexpected error occurred.");
       }
-      
+    }
   }
 
   const handleBackToDashboard = () => {
-    // Takes user to the dashboard
     router.push("/");
-    // or just "/"
   };
 
-
-  if (status === "loading") {
-    return <p className="text-white">Loading session...</p>;
+  if (loading) {
+    return <p className="text-white">Loading...</p>;
   }
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-
-    <div className="flex flex-col items-center justify-center min-h-screen text-black">
-
-<div
-        className="
-          pl-56
-          w-[120vw]
-          h-[120vh]
-          absolute
-          inset-0
-          bg-cover
-          bg-center
-          opacity-35
-          pointer-events-none
-          transition-all
-          duration-100
-          -z-10
-        "
-        style={{
-          backgroundImage: `url('/532328ldsdl.jpg')`,
-        }}
-      />
-      <h1 className="text-2xl mb-4 text-white font-custom1">Update your Credentials</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-64">
-        <input
-          type="text"
-          placeholder="First Name"
-          className="border px-3 py-2"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+      <div className="flex flex-col items-center justify-center min-h-screen text-black">
+        <div
+          className="
+            pl-56
+            w-[120vw]
+            h-[120vh]
+            absolute
+            inset-0
+            bg-cover
+            bg-center
+            opacity-35
+            pointer-events-none
+            transition-all
+            duration-100
+            -z-10
+          "
+          style={{
+            backgroundImage: `url('/532328ldsdl.jpg')`,
+          }}
         />
-        <input
-          type="text"
-          placeholder="Last Name"
-          className="border px-3 py-2"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-        />
-        {/* For password reset */}
-        <input
-          type="password"
-          placeholder="Old Password"
-          className="border px-3 py-2"
-          value={oldPassword}
-          onChange={(e) => setOldPassword(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="New Password"
-          className="border px-3 py-2"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="bg-secondary text-black py-2 hover:bg-secondary-foreground transition-all"
-        >
-          Update Profile
-        </button>
-        <button
-        onClick={handleBackToDashboard}
-        className="mt-6 px-4 py-2 rounded text-white hover:bg-white hover:text-black hover:pr-10 transition-all"
-      >
-        ← Back to Dashboard
-      </button>
-      </form>
-       
-      {errorMsg && <p className="mt-2 text-red-800">{errorMsg}</p>}
-      {successMsg && <p className="mt-2 text-secondary">{successMsg}</p>}
-    </div>
+        <h1 className="text-2xl mb-4 text-white font-custom1">Update your Credentials</h1>
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-64">
+          <input
+            type="text"
+            placeholder="First Name"
+            className="border px-3 py-2"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Last Name"
+            className="border px-3 py-2"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Old Password"
+            className="border px-3 py-2"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="New Password"
+            className="border px-3 py-2"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="bg-secondary text-black py-2 hover:bg-secondary-foreground transition-all"
+          >
+            Update Profile
+          </button>
+          <button
+            onClick={handleBackToDashboard}
+            className="mt-6 px-4 py-2 rounded text-white hover:bg-white hover:text-black hover:pr-10 transition-all"
+          >
+            ← Back to Dashboard
+          </button>
+        </form>
+        {errorMsg && <p className="mt-2 text-red-800">{errorMsg}</p>}
+        {successMsg && <p className="mt-2 text-secondary">{successMsg}</p>}
+      </div>
     </Suspense>
   );
 }
