@@ -1,7 +1,6 @@
 'use server'
 
 import { supabase } from '@/lib/supabase'
-import { prisma } from '@/lib/prisma'
 
 export async function signUpAction(formData: FormData) {
   const email = formData.get('email') as string;
@@ -29,35 +28,24 @@ export async function signUpAction(formData: FormData) {
     if (authError) throw authError;
     if (!authData.user) throw new Error('Supabase user not created');
 
-    // Check if user already exists in our database to prevent duplicates if function runs again
-    const existingUser = await prisma.user.findUnique({
-        where: { auth_id: authData.user.id }
-    });
+    // 2. Create the user in our Supabase database
+    const { error: dbError } = await supabase
+      .from('User')
+      .insert({
+        auth_id: authData.user.id,
+        email,
+        firstName,
+        lastName,
+        role: 'USER'
+      });
 
-    if (existingUser) {
-        console.log('User already exists in database after Supabase signup:', existingUser);
-        // Decide if you want to return an error or just proceed
-        // For now, let's proceed assuming this might happen due to retries/edge cases
-    } else {
-        // 2. Create the user in our Prisma database
-        await prisma.user.create({
-          data: {
-            auth_id: authData.user.id,
-            email,
-            firstName,
-            lastName,
-            role: 'USER' // Default role
-          }
-        });
-        console.log('Created new user in database:', email);
-    }
+    if (dbError) throw dbError;
 
     // Successfully signed up and created DB entry
     return { success: true };
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in signUpAction:', error);
-    // Return a generic error message or specific one based on error type
-    return { error: error.message || 'Sign-up failed. Please try again.' };
+    return { error: error instanceof Error ? error.message : 'Sign-up failed. Please try again.' };
   }
 } 
