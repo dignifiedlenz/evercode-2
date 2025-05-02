@@ -16,10 +16,10 @@ import { getOrCreateNote, updateNote } from '@/app/actions/notesActions';
 interface VideoNotesProps {
   chapterId: string;
   unitId: string;
-  timestamp: number;
+  getCurrentTimestamp: () => number;
 }
 
-export default function VideoNotes({ chapterId, unitId, timestamp }: VideoNotesProps) {
+export default function VideoNotes({ chapterId, unitId, getCurrentTimestamp }: VideoNotesProps) {
   const [note, setNote] = useState<{ id: string; content: NoteContent } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,35 +72,52 @@ export default function VideoNotes({ chapterId, unitId, timestamp }: VideoNotesP
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchNote = async () => {
       try {
-        const result = await getOrCreateNote(chapterId, unitId, timestamp);
-        
+        const initialTimestamp = getCurrentTimestamp ? getCurrentTimestamp() : 0;
+        const result = await getOrCreateNote(chapterId, unitId, initialTimestamp);
+
+        if (!isMounted) return;
+
         if (result.error) {
           throw new Error(result.error);
         }
 
         if (result.note) {
           setNote(result.note);
-          editor?.commands.setContent(result.note.content);
+          if (editor) {
+            const currentContent = editor.getJSON();
+            if (JSON.stringify(currentContent) !== JSON.stringify(result.note.content)) {
+              editor.commands.setContent(result.note.content, false);
+            }
+          }
         }
       } catch (error) {
-        console.error('Error fetching/creating note:', error);
-        toast.error('Failed to load notes');
+        if (isMounted) {
+          console.error('Error fetching/creating note:', error);
+          toast.error('Failed to load notes');
+        }
       }
     };
 
     if (editor) {
       fetchNote();
     }
-  }, [chapterId, unitId, editor, timestamp]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [chapterId, unitId, editor, getCurrentTimestamp]);
 
   const saveNote = async (content: any) => {
-    if (!note?.id) return;
+    if (!note?.id || !getCurrentTimestamp) return;
 
     try {
       setIsSaving(true);
-      const result = await updateNote(note.id, content, timestamp);
+      const currentTimestamp = getCurrentTimestamp();
+      const result = await updateNote(note.id, content, currentTimestamp);
       
       if (result.error) {
         throw new Error(result.error);

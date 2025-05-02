@@ -232,8 +232,8 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-2",
-        title: "Basic Philosophy",
-        description: "Master advanced HTML concepts including forms, semantic elements, and accessibility",
+        title: "Reality 101 - Basic Philosophy",
+        description: "Learn about the nature of reality and how we can know it.",
         backgroundImage: "/sm/500063ldsdl.jpeg",
         instructor: {
           id: "instructor-1-2",
@@ -645,7 +645,7 @@ export const courseData: Semester[] = [
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.5.3+Small.mp4",
               questions: [
                 {
-                  id: "q51",
+                  id: "q51",                                                        
                   question: "The Holy Trinity is not a mystery.",
                   options: [
                     "True",
@@ -700,16 +700,16 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-4",
-        title: "Philosophy of the Soul",
-        description: "Master advanced CSS layouts and styling techniques",
+        title: "Who is Man?",
+        description: "Learn about the nature of man and his relationship to God.",
         backgroundImage: "/creationofadam.jpg",
         units: [
           {
             id: "unit-11",
-            title: "Philosophy of the Soul (Part One)",
+            title: "Who is Man? (Part One)",
             video: {
               id: "video-11",
-              title: "Philosophy of the Soul (Part One)",
+              title: "Who is Man? (Part One)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.6.1+Small.mp4",
               questions: [
                 {
@@ -838,16 +838,16 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-5",
-        title: "The Creed - continued",
-        description: "this is the description",
+        title: "What is Sin?",
+        description: "Learn about the nature of sin and its effects.",
         backgroundImage: "/801032ht.jpg",
         units: [
           {
             id: "unit-13",
-            title: "The Creed - continued (Part One)",
+            title: "What is Sin? (Part One)",
             video: {
               id: "video-13",
-              title: "The Creed - continued (Part One)",
+              title: "What is Sin? (Part One)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.7.1+Small.mp4",
               questions: [
                 {
@@ -906,10 +906,10 @@ export const courseData: Semester[] = [
           },
           {
             id: "unit-14",
-            title: "The Creed - continued (Part Two)",
+            title: "What is Sin? (Part Two)",
             video: {
               id: "video-14",
-              title: "The Creed - continued (Part Two)",
+              title: "What is Sin? (Part Two)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.7.2+Small.mp4",
               questions: [
                 {
@@ -972,16 +972,16 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-6",
-        title: "The Creed - continued",
-        description: "this is the description",
+        title: "How are we saved?",
+        description: "Learn about the nature of sin and its effects.",
         backgroundImage: "/304110rgsdl.jpg",
         units: [
           {
             id: "unit-15",
-            title: "The Creed - continued (Part One)",
+            title: "How are we saved? (Part One)",
             video: {
               id: "video-15",
-              title: "The Creed - continued (Part One)",
+              title: "How are we saved? (Part One)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.8.1+Small.mp4",
               questions: [
                 {
@@ -1042,10 +1042,10 @@ export const courseData: Semester[] = [
           },
           {
             id: "unit-16",
-            title: "The Creed - continued (Part Two)",
+            title: "How are we saved? (Part Two)",
             video: {
               id: "video-16",
-              title: "The Creed - continued (Part Two)",
+              title: "How are we saved? (Part Two)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.8.2+Small.mp4",
               questions: [
                 {

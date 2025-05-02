@@ -6,7 +6,7 @@ import InstructorLightbox from "./InstructorLightbox";
 import courseData from "./(semester1)/courseData";
 import Sidebar from "./sidebar";
 import { CompletedUnits, Unit, Semester, Chapter } from "@/types/course";
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-view-transitions";
 import { UserProgress } from "@/lib/progress-service";
 import { useAuth } from "@/context/AuthContext";
 import { motion, animate, useMotionValue, useTransform } from "framer-motion";
@@ -28,6 +28,7 @@ interface NavLink {
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
+  transitionDirection?: 'horizontal' | 'vertical';
 }
 
 export default function DashboardContent({ 
@@ -37,7 +38,7 @@ export default function DashboardContent({
 }: DashboardContentProps) {
   const { user } = useAuth();
   const [selectedInstructor, setSelectedInstructor] = useState<number | null>(null);
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [nextIncompleteUnit, setNextIncompleteUnit] = useState<{
     semesterId: string;
     chapterId: string;
@@ -288,7 +289,20 @@ export default function DashboardContent({
       section = 'video';
     }
 
-    router.push(`/course/${semesterId}/${chapterId}/${unitId}/${section}`);
+    // Add animation options for vertical transition
+    router.push(`/course/${semesterId}/${chapterId}/${unitId}/${section}`, {
+      onTransitionReady: () => {
+        document.documentElement.animate(
+          [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-100%)', opacity: 0 }],
+          { duration: 1000, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards", pseudoElement: "::view-transition-old(content)" }
+        );
+        document.documentElement.animate(
+          [{ transform: 'translateY(100%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+          { duration: 1000, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards", pseudoElement: "::view-transition-new(content)" }
+        );
+      }
+    });
+
     setTimeout(() => setIsNavigating(false), 3000);
   }, [nextIncompleteUnit, isLoading, isNavigating, router, progressData]);
 
@@ -397,13 +411,16 @@ export default function DashboardContent({
                   <aside className="pt-8 w-full max-w-xs">
                     <nav className="space-y-3 font-morion text-base">
                       {([
-                        { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements` },
-                        { text: 'Contact Support', href: `/course/semester-${currentSemester}/support` },
-                        { text: 'Meet Your Instructors', href: `/course/semester-${currentSemester}/instructors` },
-                        { text: 'View Notes', href: `/course/semester-${currentSemester}/notes` }
+                        { text: 'My Achievements', href: `/course/semester-${currentSemester}/achievements`, transitionDirection: 'horizontal' },
+                        { text: 'View Notes', href: `/course/semester-${currentSemester}/notes`, transitionDirection: 'horizontal' },
+                        { text: 'Contact Support', href: '/support' },
                       ] as NavLink[]).map((link, index) => (
                         <div key={index}>
-                          <CustomLink href={link.href} className="text-white/80 hover:text-white transition-colors">
+                          <CustomLink 
+                            href={link.href} 
+                            className={link.className || "text-white/80 hover:text-white transition-colors"} 
+                            transitionDirection={link.transitionDirection}
+                          >
                             {link.text}
                           </CustomLink>
                         </div>

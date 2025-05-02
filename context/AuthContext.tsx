@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { User } from '@/types/user'
 import { useRouter } from 'next/navigation'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
@@ -17,86 +18,79 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [authUser, setAuthUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    // Check active sessions and sets the user
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...')
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        console.log('Session check result:', { session, error: sessionError })
-        
-        if (session?.user) {
-          console.log('User session found, fetching user data...')
-          // Fetch user directly from Supabase
-          const { data: userData, error: userError } = await supabase
-            .from('User')
-            .select('*')
-            .eq('auth_id', session.user.id)
-            .single()
+  const fetchUserProfile = async (supabaseAuthUser: SupabaseUser) => {
+    try {
+      console.log('Fetching profile for auth user:', supabaseAuthUser.id)
+      const { data: userData, error: userError } = await supabase
+        .from('User')
+        .select('*')
+        .eq('auth_id', supabaseAuthUser.id)
+        .single()
 
-          if (userError) {
-            console.error('Error fetching user data:', userError)
-            throw userError
-          }
-
-          if (!userData) {
-            console.error('No user data found for auth_id:', session.user.id)
-            throw new Error('User not found in database')
-          }
-
-          console.log('User data fetched:', userData)
-          setUser(userData)
+      if (userError) {
+        if (userError.code !== 'PGRST116') {
+          console.error('Error fetching user profile:', userError)
+        } else {
+          console.log('User profile not found (PGRST116), potentially new user.')
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error)
-      } finally {
-        setLoading(false)
+        return null
       }
+      console.log('User profile fetched:', userData)
+      return userData
+    } catch (error) {
+      console.error('Unexpected error fetching profile:', error)
+      return null
     }
+  }
 
-    initializeAuth()
+  useEffect(() => {
+    let isMounted = true
+    setLoading(true)
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
+    console.log('[Auth Context Effect] Running effect, setting up listener.')
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', { event, session })
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (!isMounted) return
+      
+      console.log('[Auth Context Listener] State changed:', { event, hasSession: !!session })
+
+      const currentSupabaseUser = session?.user ?? null
+      setAuthUser(currentSupabaseUser)
+
+      if (currentSupabaseUser) {
         try {
-          console.log('User signed in, fetching user data...')
-          // Fetch user directly from Supabase
-          const { data: userData, error: userError } = await supabase
-            .from('User')
-            .select('*')
-            .eq('auth_id', session.user.id)
-            .single()
-
-          if (userError) {
-            console.error('Error fetching user data:', userError)
-            throw userError
+          const profile = await fetchUserProfile(currentSupabaseUser)
+          if (isMounted) {
+            setUser(profile)
+            console.log('[Auth Context Listener] Profile fetched, setting loading to false')
+            setLoading(false)
           }
-
-          if (!userData) {
-            console.error('No user data found for auth_id:', session.user.id)
-            throw new Error('User not found in database')
-          }
-
-          console.log('User data fetched:', userData)
-          setUser(userData)
         } catch (error) {
-          console.error('Error fetching user data:', error)
-          setUser(null)
+          console.error('[Auth Context Listener] Error fetching profile:', error)
+          if (isMounted) {
+            setUser(null)
+            setLoading(false)
+          }
         }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out')
-        setUser(null)
+      } else {
+        if (isMounted) {
+          setUser(null)
+          console.log('[Auth Context Listener] No session, setting loading to false')
+          setLoading(false)
+        }
       }
-      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      console.log('[Auth Context Effect] Cleaning up listener')
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [supabase])
 
   const signIn = async (email: string, password: string) => {
@@ -136,17 +130,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       if (authError) {
-        console.error("Supabase auth.signUp error:", authError);
-        throw authError;
+        console.error("Supabase auth.signUp error:", authError)
+        throw authError
       }
 
       if (!authData.user) {
-        console.error('No user data returned from Supabase auth.signUp');
-        throw new Error('Failed to create authentication user.');
+        console.error('No user data returned from Supabase auth.signUp')
+        throw new Error('Failed to create authentication user.')
       }
 
-      console.log('User created in Supabase Auth, ID:', authData.user.id);
-      console.log('User email:', authData.user.email);
+      console.log('User created in Supabase Auth, ID:', authData.user.id)
+      console.log('User email:', authData.user.email)
       
       try {
         const { data: insertData, error: dbError } = await supabase
@@ -159,21 +153,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: 'USER'
           })
           .select()
-          .single();
+          .single()
 
         if (dbError) {
-          console.error('Error inserting user into public.User table:', dbError);
-          throw dbError;
+          console.error('Error inserting user into public.User table:', dbError)
+          if (dbError.code === '23505') {
+            console.warn('User already exists in User table.')
+          } else {
+            throw dbError
+          }
         }
-
-        console.log('User created successfully in public.User table:', insertData);
+        
+        if (insertData) {
+          console.log('User created successfully in public.User table:', insertData)
+        }
       } catch (dbInsertError) {
-        console.error('Caught error during database insert process:', dbInsertError);
-        throw dbInsertError;
+        console.error('Caught error during database insert process:', dbInsertError)
+        throw dbInsertError
       }
     } catch (error) {
-      console.error('Overall sign up error:', error);
-      throw new Error(`Sign up failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Overall sign up error:', error)
+      throw new Error(`Sign up failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -182,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Attempting to sign out...')
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      setUser(null)
       router.push('/auth/signin')
     } catch (error) {
       console.error('Sign out error:', error)

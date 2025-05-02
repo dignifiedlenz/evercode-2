@@ -295,12 +295,12 @@ export default function VideoPage() {
   return (
     <div className="relative min-h-screen">
       <UnitHeader />
-      <div className="absolute inset-0 pt-24 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
           <div 
             ref={playerContainerRef}
             className="relative group bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-2xl"
             style={{ 
-            maxWidth: '75vw',
+            maxWidth: '50vw',
             width: '100%'
             }}
           >
@@ -314,28 +314,13 @@ export default function VideoPage() {
               <video 
                 ref={videoRef}
                 src={unit.video.videoUrl}
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${isFullscreen ? 'object-contain' : 'object-cover'}`}
                 playsInline
                 preload="metadata"
                 onClick={togglePlayPause}
                 onContextMenu={(e) => e.preventDefault()}
               />
               
-              {/* Completion Overlay */}
-              {showCompletionOverlay && (
-                <div className="absolute bottom-8 right-8 flex flex-col gap-2 bg-gradient-to-br from-black/80 via-black/60 to-transparent rounded-xl p-4 z-30 pointer-events-none animate-fade-in backdrop-blur-sm">
-                  <p className="text-base text-white font-morion-medium">Video completed!</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-secondary animate-pulse" />
-                    <p className="text-base text-white font-morion-light">
-                      {unit?.video?.questions?.length > 0 
-                        ? "Proceeding to questions..."
-                        : "Moving to next unit..."}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* Custom Controls Overlay */}
               <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-40">
               <div className="flex flex-col gap-2">
@@ -346,10 +331,7 @@ export default function VideoPage() {
                     max={duration || 0}
                     value={currentTime || 0}
                     onChange={handleSeek}
-                  className="w-full h-1 sm:h-[5px] rounded-full cursor-pointer appearance-none bg-white/30 accent-secondary"
-                    style={{
-                      background: `linear-gradient(to right, var(--color-secondary) ${((currentTime / duration) * 100) || 0}%, rgba(255, 255, 255, 0.3) ${((currentTime / duration) * 100) || 0}%)`
-                    }}
+                  className="w-full h-0.5 rounded-full cursor-pointer bg-white accent-secondary"
                   />
                 
                 {/* Controls row */}
@@ -399,7 +381,7 @@ export default function VideoPage() {
               <VideoNotes 
                 chapterId={chapterId as string} 
                 unitId={unitId as string} 
-                timestamp={Math.floor(currentTime)}
+                getCurrentTimestamp={() => Math.floor(videoRef.current?.currentTime ?? 0)}
               />
             )}
           </div>

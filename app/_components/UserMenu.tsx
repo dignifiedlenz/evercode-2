@@ -9,14 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { resetUserProgress } from "@/app/actions/progress";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { User as UserType } from '@/types/user'
 
 const UserMenu: React.FC = () => {
     const { user, loading, signOut } = useAuth();
-    const [isResetting, setIsResetting] = useState(false);
     const router = useRouter();
 
     // Add console log for debugging
@@ -24,8 +22,9 @@ const UserMenu: React.FC = () => {
 
     // Hardcoded menu items
     const menuItems = [
-        { label: "Update Profile", href: "/profile" },
-        { label: "Support", href: "/profile" },
+        // Remove Update Profile link
+        // { label: "Update Profile", href: "/profile" },
+        { label: "Support", href: "/support" },
         // Add admin dashboard link conditionally
         ...(user?.role === "admin" ? [
             { label: "Admin Dashboard", href: "/admin/controlPanel" }
@@ -46,38 +45,6 @@ const UserMenu: React.FC = () => {
             toast.error('Sign out failed', {
                 description: 'An unexpected error occurred'
             });
-        }
-    };
-
-    // Handler for reset progress (uses imported Supabase action)
-    const handleResetProgress = async () => {
-        if (confirm("Are you sure you want to reset all your course progress? This cannot be undone.")) {
-            setIsResetting(true);
-            try {
-                const result = await resetUserProgress(); // Calls the server action
-
-                if (result.success) {
-                    toast.success('Progress reset', {
-                        description: 'Your course progress has been reset successfully'
-                    });
-                    // Force refresh the page to show updated state
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    console.error("Reset failed:", result.error);
-                    toast.error('Reset failed', {
-                        description: result.error || 'An unknown error occurred'
-                    });
-                }
-            } catch (error) {
-                console.error("Error calling resetUserProgress action:", error);
-                toast.error('Reset failed', {
-                    description: 'An error occurred while resetting progress'
-                });
-            } finally {
-                setIsResetting(false);
-            }
         }
     };
 
@@ -129,22 +96,6 @@ const UserMenu: React.FC = () => {
                             </Link>
                         </DropdownMenu.Item>
                     ))}
-
-                    <DropdownMenu.Separator className="h-px bg-zinc-700 my-1" />
-                    <DropdownMenu.Item onSelect={(e) => e.preventDefault()} className="focus:outline-none">
-                        <button
-                            onClick={handleResetProgress}
-                            disabled={isResetting}
-                            className={cn(
-                                "w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm rounded cursor-pointer",
-                                "text-red-400 hover:text-red-300 hover:bg-white/10 focus:bg-white/10 focus:text-red-300",
-                                isResetting && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            {isResetting ? "Resetting..." : "Reset Progress"}
-                        </button>
-                    </DropdownMenu.Item>
 
                     <DropdownMenu.Separator className="h-px bg-zinc-700 my-1" />
                     <DropdownMenu.Item onClick={handleSignOut} className="focus:outline-none">

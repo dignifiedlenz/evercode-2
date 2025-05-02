@@ -10,13 +10,15 @@ interface ChronologicalModeContextType {
 const ChronologicalModeContext = createContext<ChronologicalModeContextType | undefined>(undefined);
 
 export function ChronologicalModeProvider({ children }: { children: React.ReactNode }) {
-  const [isChronologicalMode, setIsChronologicalMode] = useState(false);
+  const [isChronologicalMode, setIsChronologicalMode] = useState(true);
 
   // Load preference from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('chronologicalMode');
     if (stored !== null) {
       setIsChronologicalMode(stored === 'true');
+    } else {
+      localStorage.setItem('chronologicalMode', 'true');
     }
   }, []);
 

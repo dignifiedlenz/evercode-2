@@ -1,114 +1,165 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Trophy, Flame, BookOpen, CheckCircle, Calendar, Clock } from "lucide-react";
+import { Trophy, Flame, BookOpen, CheckCircle, Zap, Target, Film, GraduationCap, Star } from "lucide-react";
+import { useProgress, UnitProgress, VideoProgress } from "@/app/_components/ProgressClient";
+import courseData from "@/app/_components/(semester1)/courseData";
 
 interface Achievement {
   id: string;
   name: string;
   description: string;
-  type: 'streak' | 'units' | 'quizzes' | 'chapters' | 'time' | 'consistency';
-  threshold: number;
-  progress: number;
+  type: 'units' | 'quizzes' | 'intensity' | 'videos' | 'semester';
   unlocked_at: string | null;
-  icon: string;
+  icon: React.ReactNode;
 }
+
+const checkEagerLearner = (unitProgress: UnitProgress[] | undefined): { unlocked: boolean; unlocked_at: string | null } => {
+  if (!unitProgress || unitProgress.length < 10) {
+    return { unlocked: false, unlocked_at: null };
+  }
+  const completedUnits = unitProgress
+    .filter(up => up.videoCompleted && up.questionsCompleted >= up.totalQuestions && up.lastUpdated)
+    .sort((a, b) => new Date(a.lastUpdated!).getTime() - new Date(b.lastUpdated!).getTime());
+  if (completedUnits.length < 10) {
+    return { unlocked: false, unlocked_at: null };
+  }
+  const twentyFourHours = 24 * 60 * 60 * 1000;
+  for (let i = 0; i <= completedUnits.length - 10; i++) {
+    const firstUnitTime = new Date(completedUnits[i].lastUpdated!).getTime();
+    const tenthUnitTime = new Date(completedUnits[i + 9].lastUpdated!).getTime();
+    if (tenthUnitTime - firstUnitTime <= twentyFourHours) {
+      return { unlocked: true, unlocked_at: completedUnits[i + 9].lastUpdated!.toISOString() };
+    }
+  }
+  return { unlocked: false, unlocked_at: null };
+};
+
+// Helper function to ensure timestamp is ISO string or null
+const formatUnlockTimestamp = (timestamp: string | Date | undefined | null): string | null => {
+  if (!timestamp) {
+    return new Date().toISOString(); // Fallback if timestamp is missing but needed
+  }
+  if (typeof timestamp === 'string') {
+    // Assuming it's already a valid ISO string from Supabase
+    // Add validation here if needed
+    return timestamp;
+  }
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  // If it's something else unexpected, return fallback or null
+  console.warn('Unexpected timestamp format:', timestamp);
+  return new Date().toISOString(); 
+};
 
 export default function AchievementsPage() {
   const pathname = usePathname();
   const [semesterId, setSemesterId] = useState<string>("");
-  const [currentSemester, setCurrentSemester] = useState<number>(1);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [currentSemesterNum, setCurrentSemesterNum] = useState<number>(1);
+  const { progress, loading } = useProgress();
 
-  // Extract semesterId from URL path
   useEffect(() => {
     const pathSegments = pathname.split('/');
     const sid = pathSegments[2] || "";
     setSemesterId(sid);
-    setCurrentSemester(parseInt(sid.replace('semester-', ''), 10) || 1);
+    setCurrentSemesterNum(parseInt(sid.replace('semester-', ''), 10) || 1);
   }, [pathname]);
 
-  useEffect(() => {
-    // Mock achievements data - in a real app, these would come from an API
-    const mockAchievements: Achievement[] = [
-      {
-        id: "streak-1",
-        name: "7-Day Streak",
-        description: "Study for 7 days in a row",
-        type: "streak",
-        threshold: 7,
-        progress: 5,
-        unlocked_at: null,
-        icon: "flame"
-      },
-      {
-        id: "units-1",
-        name: "Unit Master",
-        description: "Complete 5 units",
-        type: "units",
-        threshold: 5,
-        progress: 3,
-        unlocked_at: null,
-        icon: "book"
-      },
-      {
-        id: "quizzes-1",
-        name: "Quiz Champion",
-        description: "Complete 10 quizzes with 80% or higher",
-        type: "quizzes",
-        threshold: 10,
-        progress: 7,
-        unlocked_at: null,
-        icon: "check"
-      },
-      {
-        id: "time-1",
-        name: "Time Warrior",
-        description: "Study for 20 hours this semester",
-        type: "time",
-        threshold: 20,
-        progress: 15,
-        unlocked_at: null,
-        icon: "clock"
-      },
-      {
-        id: "consistency-1",
-        name: "Consistent Learner",
-        description: "Study at least 3 times per week for 4 weeks",
-        type: "consistency",
-        threshold: 12,
-        progress: 8,
-        unlocked_at: null,
-        icon: "calendar"
-      }
-    ];
-
-    setAchievements(mockAchievements);
-    setLoading(false);
-  }, [currentSemester]);
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'streak':
-        return <Flame className="w-6 h-6 text-orange-500" />;
-      case 'units':
-        return <BookOpen className="w-6 h-6 text-blue-500" />;
-      case 'quizzes':
-        return <CheckCircle className="w-6 h-6 text-green-500" />;
-      case 'time':
-        return <Clock className="w-6 h-6 text-purple-500" />;
-      case 'consistency':
-        return <Calendar className="w-6 h-6 text-yellow-500" />;
-      default:
-        return <Trophy className="w-6 h-6 text-gray-500" />;
+  const averageAttempts = useMemo(() => {
+    if (!progress?.questionProgress || progress.questionProgress.length === 0) {
+      return 0;
     }
-  };
+    const totalAttempts = progress.questionProgress.reduce((sum, qp) => sum + qp.attempts, 0);
+    const totalQuestionsAttempted = progress.questionProgress.length;
+    return totalQuestionsAttempted > 0 ? totalAttempts / totalQuestionsAttempted : 0;
+  }, [progress]);
 
-  const getProgressPercentage = (progress: number, threshold: number) => {
-    return Math.min((progress / threshold) * 100, 100);
-  };
+  const achievements: Achievement[] = useMemo(() => {
+    const userAchievements: Achievement[] = [];
+    if (!progress) return [];
+
+    const sortedUnitProgress = [...(progress.unitProgress || [])].sort((a, b) => new Date(b.lastUpdated!).getTime() - new Date(a.lastUpdated!).getTime());
+    const sortedQuestionProgress = [...(progress.questionProgress || [])].sort((a, b) => new Date(b.lastUpdated!).getTime() - new Date(a.lastUpdated!).getTime());
+    const sortedVideoProgress = [...(progress.videoProgress || [])].sort((a, b) => new Date(b.lastUpdated!).getTime() - new Date(a.lastUpdated!).getTime());
+
+    const completedUnits = sortedUnitProgress.filter(up => up.videoCompleted && up.questionsCompleted >= up.totalQuestions);
+    const completedUnitCount = completedUnits.length;
+    const lastCompletedUnitTimestamp = completedUnits[0]?.lastUpdated;
+
+    const correctQuestions = sortedQuestionProgress.filter(qp => qp.correct);
+    const correctQuestionCount = correctQuestions.length;
+    const lastCorrectQuestionTimestamp = correctQuestions[0]?.lastUpdated;
+
+    const completedVideos = sortedVideoProgress.filter(vp => vp.completed);
+    const completedVideoCount = completedVideos.length;
+    const lastCompletedVideoTimestamp = completedVideos[0]?.lastUpdated;
+
+    userAchievements.push({
+      id: "units-1", name: "Unit Explorer", description: "Complete 5 units",
+      type: "units",
+      unlocked_at: completedUnitCount >= 5 ? formatUnlockTimestamp(lastCompletedUnitTimestamp) : null,
+      icon: <BookOpen className="w-6 h-6 text-blue-500" />
+    });
+
+    userAchievements.push({
+      id: "units-2", name: "Unit Master", description: "Complete 10 units",
+      type: "units",
+      unlocked_at: completedUnitCount >= 10 ? formatUnlockTimestamp(lastCompletedUnitTimestamp) : null,
+      icon: <BookOpen className="w-6 h-6 text-blue-600" />
+    });
+
+    const currentSemesterData = courseData.find(s => s.id === semesterId);
+    const totalUnitsInSemester = currentSemesterData?.chapters.reduce((sum, chap) => sum + chap.units.length, 0) ?? 0;
+    const completedUnitsInSemester = sortedUnitProgress.filter(up => {
+      const unitLocation = currentSemesterData?.chapters.find(c => c.units.some(u => u.id === up.unitId));
+      return unitLocation && up.videoCompleted && up.questionsCompleted >= up.totalQuestions;
+    });
+    const completedUnitsInSemesterCount = completedUnitsInSemester.length;
+    const lastUnitInSemesterTimestamp = completedUnitsInSemester[0]?.lastUpdated;
+
+    userAchievements.push({
+      id: "semester-1", name: "Semester Graduate", description: `Complete all ${totalUnitsInSemester} units in Semester ${currentSemesterNum}`,
+      type: "semester",
+      unlocked_at: totalUnitsInSemester > 0 && completedUnitsInSemesterCount >= totalUnitsInSemester ? formatUnlockTimestamp(lastUnitInSemesterTimestamp) : null,
+      icon: <GraduationCap className="w-6 h-6 text-green-500" />
+    });
+
+    userAchievements.push({
+      id: "quizzes-1", name: "Quiz Whiz", description: "Answer 100 questions correctly",
+      type: "quizzes",
+      unlocked_at: correctQuestionCount >= 100 ? formatUnlockTimestamp(lastCorrectQuestionTimestamp) : null,
+      icon: <CheckCircle className="w-6 h-6 text-teal-500" />
+    });
+
+    const firstTryAceUnlocked = averageAttempts > 0 && averageAttempts < 1.5 && (progress.questionProgress?.length ?? 0) >= 10;
+    const lastAttemptTimestamp = sortedQuestionProgress[0]?.lastUpdated;
+    userAchievements.push({
+        id: "quizzes-2", name: "First Try Ace", description: "Maintain an average of less than 1.5 attempts per question (min. 10 questions attempted)",
+        type: "quizzes",
+        unlocked_at: firstTryAceUnlocked ? formatUnlockTimestamp(lastAttemptTimestamp) : null,
+        icon: <Star className="w-6 h-6 text-yellow-500" />
+    });
+
+    const eagerLearnerStatus = checkEagerLearner(progress?.unitProgress);
+    userAchievements.push({
+      id: "intensity-1", name: "Eager Learner", description: "Complete 10 units within a single day",
+      type: "intensity",
+      unlocked_at: eagerLearnerStatus.unlocked_at,
+      icon: <Zap className="w-6 h-6 text-red-500" />
+    });
+
+    userAchievements.push({
+      id: "videos-1", name: "Binge Watcher", description: "Watch 10 videos completely",
+      type: "videos",
+      unlocked_at: completedVideoCount >= 10 ? formatUnlockTimestamp(lastCompletedVideoTimestamp) : null,
+      icon: <Film className="w-6 h-6 text-purple-500" />
+    });
+
+    return userAchievements;
+
+  }, [progress, averageAttempts, semesterId, currentSemesterNum]);
 
   if (loading) {
     return (
@@ -119,77 +170,42 @@ export default function AchievementsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-16">
+    <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-24">
       <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-morion text-white">Semester {currentSemester} Achievements</h1>
+        <div className="flex flex-col items-center text-center mb-4">
+          <h1 className="text-3xl font-morion text-white mb-2">Semester {currentSemesterNum} Achievements</h1>
+          {averageAttempts > 0 && (
+            <p className="text-sm text-white/60">
+              Average Attempts / Question: 
+              <span className="text-base font-medium text-white ml-1">
+                {averageAttempts.toFixed(1)}
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {achievements.map((achievement) => (
             <div
               key={achievement.id}
-              className="bg-white/5 rounded-lg border border-white/10 p-4 hover:bg-white/10 transition-colors"
+              className={`bg-white/5 rounded-lg border border-white/10 p-4 transition-opacity ${achievement.unlocked_at ? 'opacity-100 border-secondary/50' : 'opacity-50'}`}
             >
               <div className="flex items-center gap-3 mb-3">
-                {getIcon(achievement.type)}
-                <h3 className="text-white font-medium">{achievement.name}</h3>
+                {achievement.icon}
+                <h3 className={`font-medium ${achievement.unlocked_at ? 'text-white' : 'text-white/70'}`}>{achievement.name}</h3>
               </div>
-              
+
               <p className="text-white/60 text-sm mb-4">{achievement.description}</p>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/40">Progress</span>
-                  <span className="text-white/60">
-                    {achievement.progress}/{achievement.threshold}
-                  </span>
-                </div>
-                
-                <div className="w-full bg-white/10 rounded-full h-2">
-                  <div
-                    className="bg-secondary h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${getProgressPercentage(achievement.progress, achievement.threshold)}%`
-                    }}
-                  />
-                </div>
-                
-                {achievement.unlocked_at && (
-                  <p className="text-xs text-green-500 mt-2">
-                    Unlocked on {new Date(achievement.unlocked_at).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
+
+              {achievement.unlocked_at ? (
+                <p className="text-xs text-secondary">
+                  Unlocked on {new Date(achievement.unlocked_at).toLocaleDateString()}
+                </p>
+              ) : (
+                <p className="text-xs text-white/40">Locked</p>
+              )}
             </div>
           ))}
-        </div>
-
-        {/* Stats Overview */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
-            <h3 className="text-white/60 text-sm mb-2">Current Streak</h3>
-            <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-orange-500" />
-              <span className="text-2xl text-white font-medium">5 days</span>
-            </div>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
-            <h3 className="text-white/60 text-sm mb-2">Total Study Time</h3>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-purple-500" />
-              <span className="text-2xl text-white font-medium">15 hours</span>
-            </div>
-          </div>
-          
-          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
-            <h3 className="text-white/60 text-sm mb-2">Completion Rate</h3>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <span className="text-2xl text-white font-medium">75%</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

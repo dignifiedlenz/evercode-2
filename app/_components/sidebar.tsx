@@ -7,10 +7,10 @@ import { Semester } from "@/types/course";
 import CustomLink from "./CustomLink";
 import { getUserProgress } from '@/lib/progress-service';
 import { useTransitionRouter } from 'next-view-transitions';
-import { usePathname } from 'next/navigation';
 
 interface SidebarProps {
   courseData: Semester[];
+  currentSemester: number;
   completedUnits?: Record<string, boolean>;
 }
 
@@ -19,24 +19,17 @@ interface ChapterProgress {
   percentage: number;
 }
 
-export default function Sidebar({ courseData, completedUnits }: SidebarProps) {
+export default function Sidebar({ courseData, currentSemester, completedUnits }: SidebarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [chapterProgress, setChapterProgress] = useState<ChapterProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useTransitionRouter();
-  const pathname = usePathname();
 
-  // Extract current semester from URL
-  const currentSemester = useMemo(() => {
-    const match = pathname.match(/semester-(\d+)/);
-    return match ? parseInt(match[1], 10) : 1; // Default to semester 1 if not found
-  }, [pathname]);
-
-  // Get the current semester data based on the selected semester - memoized
+  // Get the current semester data based on the prop - REINSTATED
   const currentSemesterData = useMemo(() => 
     courseData.find(sem => sem.id === `semester-${currentSemester}`),
-    [courseData, currentSemester]
+    [courseData, currentSemester] // Depend on prop
   );
 
   // Memoized function to calculate progress from API data
@@ -112,7 +105,7 @@ export default function Sidebar({ courseData, completedUnits }: SidebarProps) {
     });
   }, [currentSemesterData, completedUnits]);
 
-  // Load progress data - only when dependencies change
+  // Load progress data - Modify this useEffect
   useEffect(() => {
     let isMounted = true;
     
@@ -155,10 +148,17 @@ export default function Sidebar({ courseData, completedUnits }: SidebarProps) {
     };
 
     setIsLoading(true);
-    loadProgress();
+    // *** DELAY THE EXECUTION ***
+    const timerId = setTimeout(() => {
+      if (isMounted) {
+        console.log('Sidebar useEffect: Running delayed loadProgress');
+        loadProgress();
+      }
+    }, 10); // Small delay (e.g., 10ms)
     
     return () => {
       isMounted = false;
+      clearTimeout(timerId); // Clear the timeout on cleanup
     };
   }, [currentSemesterData, completedUnits, calculateProgressFromAPI, calculateProgressFromCompletedUnits]);
 

@@ -76,7 +76,7 @@ export default function NotesPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-16">
+      <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-24">
         <div className="text-center text-white/50">Loading notes...</div>
       </div>
     );
@@ -84,14 +84,14 @@ export default function NotesPage() {
 
   if (error) {
     return (
-      <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-16">
+      <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-24">
         <div className="text-center text-red-500">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-16">
+    <div className="p-4 md:p-8 backdrop-blur-sm bg-black/30 rounded-lg max-w-7xl mx-auto mt-24">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}
         <div className="md:w-1/3 lg:w-1/4">
