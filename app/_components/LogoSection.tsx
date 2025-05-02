@@ -13,6 +13,9 @@ export default function LogoSection({ semesterId }: LogoSectionProps) {
   const legacyRouter = useRouter();
   const transitionRouter = useTransitionRouter();
 
+  // Add debug logging
+  console.log('[LogoSection] Rendering with semesterId:', semesterId);
+
   const currentSemester = semesterId 
     ? parseInt(semesterId.replace('semester-', ''), 10) 
     : 1;
@@ -20,10 +23,12 @@ export default function LogoSection({ semesterId }: LogoSectionProps) {
   const dashboardHref = `/course/semester-${currentSemester}`;
 
   const handleSemesterChange = (semester: number) => {
+    console.log('[LogoSection] Changing semester to:', semester);
     legacyRouter.push(`/course/semester-${semester}`);
   };
 
   const handleLogoClick = () => {
+    console.log('[LogoSection] Logo clicked, navigating to:', dashboardHref);
     transitionRouter.push(dashboardHref);
   };
 

@@ -7,40 +7,48 @@ import { UserRole } from '@prisma/client'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// Helper function to verify admin privileges
+// Helper to verify admin status
 async function verifyAdmin(supabase: any) {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    
-    if (error || !session) {
-      console.log('No session found in admin API')
-      return { authorized: false, error: 'Unauthorized' }
+    // Get the current user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      console.error('Admin verification: No session found', sessionError)
+      return { authorized: false, error: 'Unauthorized - Please log in' }
     }
-    
-    // Look up user to check role
+
+    // Get user from Prisma DB to check role
     const user = await prisma.user.findUnique({
-      where: { auth_id: session.user.id },
-      select: { role: true }
+      where: { 
+        // Use the auth.users UUID as foreign key
+        auth_id: session.user.id 
+      }
     })
-    
+
     if (!user) {
-      return { authorized: false, error: 'User not found' }
+      console.error('Admin verification: User not found in DB')
+      return { authorized: false, error: 'Unauthorized - User not found' }
     }
-    
-    // Check if user is an admin
-    if (
-      user.role !== UserRole.ROOT_ADMIN && 
-      user.role !== UserRole.SUPER_ADMIN && 
-      user.role !== UserRole.REGIONAL_ADMIN && 
-      user.role !== UserRole.LOCAL_ADMIN
-    ) {
-      return { authorized: false, error: 'Insufficient permissions' }
+
+    // Check if user has admin role - using the appropriate user roles from the enum
+    if (user.role !== UserRole.ROOT_ADMIN && 
+        user.role !== UserRole.SUPER_ADMIN && 
+        user.role !== UserRole.REGIONAL_ADMIN && 
+        user.role !== UserRole.LOCAL_ADMIN) {
+      console.error('Admin verification: User does not have admin role')
+      return { 
+        authorized: false, 
+        error: 'Forbidden - Admin privileges required' 
+      }
     }
-    
-    return { authorized: true, session }
+
+    return { authorized: true, userId: user.id }
   } catch (error) {
-    console.error('Auth verification error:', error)
-    return { authorized: false, error: 'Authentication error' }
+    console.error('Error in admin verification:', error)
+    return { 
+      authorized: false, 
+      error: 'Server error during authorization'
+    }
   }
 }
 
@@ -48,8 +56,8 @@ export async function GET() {
   try {
     console.log('Admin Users API: GET request received')
     
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    // Pass cookies correctly - using recommended pattern
+    const supabase = createRouteHandlerClient({ cookies: () => cookies() })
     
     const { authorized, error } = await verifyAdmin(supabase)
     if (!authorized) {
@@ -88,8 +96,9 @@ export async function POST(request: Request) {
   try {
     console.log('Admin Users API: POST request received')
     
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    // Use the same pattern as the GET handler
+    const cookiesInstance = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookiesInstance })
     
     const { authorized, error } = await verifyAdmin(supabase)
     if (!authorized) {

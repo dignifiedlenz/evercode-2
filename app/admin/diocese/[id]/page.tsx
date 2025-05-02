@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import DioceseDashboardClient from "./DioceseDashboardClient";
 
-export default async function DioceseDashboard({ params }: { params: { id: string } }) {
+export default async function DioceseDashboard(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Fetch diocese data with all related information
     const diocese = await prisma.diocese.findUnique({

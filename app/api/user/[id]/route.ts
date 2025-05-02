@@ -4,10 +4,8 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // In Next.js 15, params should be awaited
     const id = await params.id
@@ -15,7 +13,7 @@ export async function GET(
     
     try {
       // Create Supabase client
-      const cookieStore = cookies()
+      const cookieStore = await cookies()
       const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
       
       // Get user from Supabase

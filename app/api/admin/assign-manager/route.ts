@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   try {
     console.log('Admin Assign Manager API: POST request received')
     
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     const { authorized, error } = await verifyAdmin(supabase)

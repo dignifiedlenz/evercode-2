@@ -8,7 +8,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerComponentClient({ cookies });
+  const cookiesInstance = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookiesInstance });
   
   // Check if user is authenticated
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();

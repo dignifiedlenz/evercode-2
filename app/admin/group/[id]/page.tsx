@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import GroupDashboardClient from "./GroupDashboardClient";
 
-export default async function GroupDashboard({ params }: { params: { id: string } }) {
+export default async function GroupDashboard(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Fetch group data with all related information
     const group = await prisma.group.findUnique({

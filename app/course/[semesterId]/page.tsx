@@ -33,7 +33,12 @@ export default function SemesterPage({ params }: PageProps) {
   useEffect(() => {
     if (!authLoading && !user) {
       console.log('SemesterPage: No user found after auth check, redirecting...');
-      router.push("/auth/signin");
+      // Add a delay to avoid immediate redirects which could contribute to loops
+      const redirectTimer = setTimeout(() => {
+        router.push("/auth/signin");
+      }, 1000);
+      
+      return () => clearTimeout(redirectTimer);
     }
   }, [user, authLoading, router]);
 

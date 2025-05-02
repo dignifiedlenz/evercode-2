@@ -111,50 +111,80 @@ export default function Sidebar({ courseData, currentSemester, completedUnits }:
     
     const loadProgress = async () => {
       try {
-        // Try to get progress from API first
-        const progress = await getUserProgress();
-        
-        if (!isMounted) return;
-        
-        if (progress && progress.unitProgress && currentSemesterData) {
-          // Calculate progress using API data if available
-          const calculatedProgress = calculateProgressFromAPI(progress);
-          setChapterProgress(calculatedProgress);
-        } else if (completedUnits && currentSemesterData) {
-          // Fall back to completedUnits if API data is not available
-          const calculatedProgress = calculateProgressFromCompletedUnits();
-          setChapterProgress(calculatedProgress);
-        } else {
-          // No progress data available
-          setChapterProgress([]);
-        }
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Failed to load progress:', error);
-        
-        if (!isMounted) return;
-        
-        // Fall back to completedUnits if API call fails
+        console.log('[Sidebar] Starting to load progress data');
+        // Use completedUnits from props if available first
         if (completedUnits && currentSemesterData) {
+          console.log('[Sidebar] Using completedUnits from props');
           const calculatedProgress = calculateProgressFromCompletedUnits();
           setChapterProgress(calculatedProgress);
-        } else {
-          setChapterProgress([]);
+          setIsLoading(false);
+          return; // Exit early if we have props data
         }
         
-        setIsLoading(false);
+        // Only try to fetch from API if completedUnits prop is not available
+        if (!completedUnits) {
+          console.log('[Sidebar] No completedUnits from props, trying API');
+          try {
+            // Add error handling for the API call
+            const response = await fetch('/api/progress', {
+              // Adding cache: no-store to prevent caching issues
+              cache: 'no-store'
+            });
+
+            // Handle auth errors gracefully without causing redirects
+            if (response.status === 401) {
+              console.log('[Sidebar] Auth error in progress API - handling gracefully');
+              if (isMounted) {
+                setChapterProgress([]);
+                setIsLoading(false);
+              }
+              return;
+            }
+            
+            if (!response.ok) {
+              throw new Error(`API error: ${response.status}`);
+            }
+            
+            const progress = await response.json();
+            
+            if (!isMounted) return;
+            
+            if (progress && progress.unitProgress && currentSemesterData) {
+              console.log('[Sidebar] Got progress from API');
+              // Calculate progress using API data if available
+              const calculatedProgress = calculateProgressFromAPI(progress);
+              setChapterProgress(calculatedProgress);
+            } else {
+              console.log('[Sidebar] No usable data from API');
+              // No progress data available
+              setChapterProgress([]);
+            }
+          } catch (apiError) {
+            console.error('[Sidebar] API error:', apiError);
+            if (!isMounted) return;
+            // Handle API errors gracefully
+            setChapterProgress([]);
+          }
+        }
+      } catch (error) {
+        console.error('[Sidebar] Failed to load progress:', error);
+        
+        if (!isMounted) return;
+        setChapterProgress([]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    setIsLoading(true);
     // *** DELAY THE EXECUTION ***
     const timerId = setTimeout(() => {
       if (isMounted) {
-        console.log('Sidebar useEffect: Running delayed loadProgress');
+        console.log('[Sidebar] Running delayed loadProgress');
         loadProgress();
       }
-    }, 10); // Small delay (e.g., 10ms)
+    }, 500); // Longer delay (500ms) to ensure server components have loaded first
     
     return () => {
       isMounted = false;

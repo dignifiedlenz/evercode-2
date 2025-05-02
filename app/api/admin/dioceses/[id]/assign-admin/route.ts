@@ -40,14 +40,12 @@ async function verifyAdmin(supabase: any) {
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     console.log('Diocese Admin Assignment API: PATCH request received for diocese:', params.id)
     
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     const { authorized, error } = await verifyAdmin(supabase)

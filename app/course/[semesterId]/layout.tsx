@@ -10,6 +10,16 @@ import courseData from "@/app/_components/(semester1)/courseData";
 import Sidebar from '@/app/_components/sidebar';
 // import { useAuth } from '@/context/AuthContext'; // Remove client auth context
 
+// Use a longer delay before allowing a redirect to happen
+// This will ensure the auth cookies have time to be processed
+const AUTH_WAIT_DELAY_MS = 500;
+
+// Store redirect counter in memory (will reset on server restart)
+let redirectCounter = 0;
+let lastRedirectTime = 0;
+const REDIRECT_WINDOW_MS = 10000; // 10 seconds
+const MAX_REDIRECTS = 3;
+
 // Helper for safe stringify (optional, can remove if not debugging complex errors)
 function safeStringifyError(error: any): string {
   try {
@@ -25,6 +35,26 @@ interface LayoutProps {
   params: { semesterId: string }; // Get params directly
 }
 
+// Prevent infinite redirect loops
+function shouldAllowAuthRedirect(): boolean {
+  const now = Date.now();
+  
+  // Reset counter if it's been a while
+  if (now - lastRedirectTime > REDIRECT_WINDOW_MS) {
+    redirectCounter = 0;
+  }
+  
+  // Increment counter and update timestamp
+  redirectCounter++;
+  lastRedirectTime = now;
+  
+  // Log the redirect attempt
+  console.log(`[Server Layout] Redirect counter: ${redirectCounter}`);
+  
+  // Allow redirect if we're under the limit
+  return redirectCounter <= MAX_REDIRECTS;
+}
+
 // Make the layout an async function
 export default async function SemesterLayout({ children, params: paramsProp }: LayoutProps) {
   
@@ -33,6 +63,9 @@ export default async function SemesterLayout({ children, params: paramsProp }: L
   // const cookieStore = await cookies(); // Revert explicit await
   // --- End Await --- 
 
+  // Add a delay to give auth cookie time to be processed
+  await new Promise(resolve => setTimeout(resolve, AUTH_WAIT_DELAY_MS));
+
   let user = null;
   let dbUser = null;
   let initialCompletedUnits: Record<string, boolean> = {}; // Default empty
@@ -40,8 +73,9 @@ export default async function SemesterLayout({ children, params: paramsProp }: L
   try {
     console.log('[Server Layout] Rendering with awaited params:', params);
 
-    // Revert to documented way: Pass cookies() directly via function
-    const supabase = createServerComponentClient({ cookies: () => cookies() });
+    // Use standard pattern with cookies directly
+    const cookiesInstance = cookies();
+    const supabase = createServerComponentClient({ cookies: () => cookiesInstance });
 
     // Perform auth check server-side
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
@@ -49,6 +83,24 @@ export default async function SemesterLayout({ children, params: paramsProp }: L
 
     if (userError || !authUser) {
       console.error('[Server Layout] Auth error or no user:', userError ? safeStringifyError(userError) : 'No user');
+      
+      // Check if we should allow a redirect
+      if (!shouldAllowAuthRedirect()) {
+        console.log('[Server Layout] BREAKING REDIRECT LOOP: Continuing without redirect');
+        // Return minimal layout without data to break the loop
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-black text-white">
+            <div className="text-center p-8">
+              <h1 className="text-2xl mb-4">Authentication Error</h1>
+              <p>There was a problem authenticating your session.</p>
+              <a href="/auth/signin" className="text-blue-400 underline mt-4 block">Click here to sign in</a>
+            </div>
+          </div>
+        );
+      }
+      
+      // Allow the redirect
+      console.log('[Server Layout] Redirecting to signin page');
       redirect('/auth/signin');
     }
     
@@ -157,11 +209,10 @@ export default async function SemesterLayout({ children, params: paramsProp }: L
         <LogoSection semesterId={semesterId} /> 
         {/* UserMenu might still use useAuth client-side, which is fine */}
         <UserMenu /> 
+        {/* Re-enabled with improved error handling */}
         <Sidebar 
           courseData={courseData} 
           currentSemester={currentSemester} 
-          // Pass initial progress state needed by Sidebar directly
-          // Note: Sidebar might *also* use useProgress client-side for updates
           completedUnits={initialCompletedUnits}
         />
         <main className="relative min-h-screen w-full">{children}</main>

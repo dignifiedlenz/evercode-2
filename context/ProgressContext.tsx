@@ -26,6 +26,13 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children }) 
     const fetchProgress = async () => {
       try {
         const res = await fetch('/api/progress');
+        
+        // Handle auth errors gracefully without causing redirects
+        if (res.status === 401) {
+          console.log('Auth error in progress API - not redirecting');
+          return;
+        }
+        
         if (res.ok) {
           const textData = await res.text();
           

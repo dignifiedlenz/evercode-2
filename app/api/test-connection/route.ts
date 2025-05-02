@@ -1,5 +1,4 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
@@ -9,8 +8,8 @@ export async function GET() {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
     // Test auth connection with regular client
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const cookiesInstance = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookiesInstance })
     const { data: authData, error: authError } = await supabase.auth.getSession()
     console.log('Auth test result:', { authData, authError })
 

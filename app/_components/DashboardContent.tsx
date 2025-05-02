@@ -179,7 +179,21 @@ export default function DashboardContent({
 
       try {
         const response = await fetch('/api/progress');
+        
+        // Handle auth errors without forcing a page reload
+        if (response.status === 401) {
+          console.log("Authentication error when fetching progress - not redirecting");
+          if (isMounted) {
+            setCompletedUnitMap({});
+            setCalculatedProgress(0);
+            setIsLoadingProgress(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
         if (!response.ok) throw new Error(`Failed to fetch progress: ${response.statusText}`);
+        
         const data: { completedUnitIds: string[] } = await response.json();
         
         if (!isMounted) return;

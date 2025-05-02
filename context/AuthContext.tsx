@@ -26,7 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('[Auth Context] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
   console.log('[Auth Context] Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Loaded' : 'MISSING!');
 
-  const supabase = createClientComponentClient()
+  // Create the Supabase client with correct options
+  const supabase = createClientComponentClient({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  })
 
   const fetchUserProfile = async (supabaseAuthUser: SupabaseUser) => {
     console.log('[fetchUserProfile] Attempting fetch for:', supabaseAuthUser.id);
@@ -58,6 +62,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[Auth Context Effect] Initializing.');
     setLoading(true); // Reset loading state on mount
 
+    // Make initial auth check more explicit and direct
+    const performInitialAuthCheck = async () => {
+      if (!isMounted) return;
+      
+      try {
+        // Get session directly first
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('[Auth Context] Session error:', sessionError);
+          if (isMounted) {
+            setAuthUser(null);
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (!sessionData.session) {
+          console.log('[Auth Context] No active session found');
+          if (isMounted) {
+            setAuthUser(null);
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // We have a session, set the auth user
+        const currentUser = sessionData.session.user;
+        if (isMounted) {
+          setAuthUser(currentUser);
+        }
+        
+        // Try to fetch the profile
+        if (currentUser) {
+          try {
+            const profile = await fetchUserProfile(currentUser);
+            if (isMounted) {
+              setUser(profile);
+              setLoading(false);
+            }
+          } catch (profileError) {
+            console.error('[Auth Context] Profile fetch error:', profileError);
+            if (isMounted) {
+              // Still set the auth user even if profile fetch fails
+              setLoading(false);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Auth Context] Initial auth check error:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    // Run the initial check
+    performInitialAuthCheck();
+
     console.log('[Auth Context Effect] Setting up onAuthStateChange listener.');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth Context Listener] Fired! Event:', event, 'Has Session:', !!session);
@@ -67,14 +132,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const currentSupabaseUser = session?.user ?? null;
-      setAuthUser(currentSupabaseUser);
+      
+      // Only update if auth state actually changed
+      if (
+        (currentSupabaseUser && !authUser) || // User signed in
+        (!currentSupabaseUser && authUser) || // User signed out
+        (currentSupabaseUser && authUser && currentSupabaseUser.id !== authUser.id) // Different user
+      ) {
+        console.log('[Auth Context Listener] Auth state changed, updating...');
+        
+        setAuthUser(currentSupabaseUser);
 
-      if (currentSupabaseUser) {
-        console.log('[Auth Context Listener] User found via listener, attempting to fetch profile...');
-        // Fetch profile ONLY IF the user is different from the current one,
-        // or if the user state is currently null (initial load or after sign out)
-        // This check might be overly complex, let's simplify for now and just fetch
-        // if (currentSupabaseUser.id !== user?.auth_id || !user) {
+        if (currentSupabaseUser) {
+          console.log('[Auth Context Listener] User found via listener, attempting to fetch profile...');
           try {
             const profile = await fetchUserProfile(currentSupabaseUser);
             if (isMounted) {
@@ -85,19 +155,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch (error) {
             console.error('[Auth Context Listener] Error calling fetchUserProfile:', error);
             if (isMounted) {
-              setUser(null);
+              // Don't clear the user here, just mark loading as false
               console.log('[Auth Context Listener] Error case via listener, setting loading=false.');
               setLoading(false);
             }
           }
-        // } else {
-        //   console.log('[Auth Context Listener] Listener fired, but user unchanged. Ensuring loading is false.');
-        //   if (isMounted && loading) setLoading(false); // Ensure loading is false if user is already set
-        // }
+        } else {
+          console.log('[Auth Context Listener] No session/user found via listener. Setting user=null, loading=false.');
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+          }
+        }
       } else {
-        console.log('[Auth Context Listener] No session/user found via listener. Setting user=null, loading=false.');
-        if (isMounted) {
-          setUser(null);
+        console.log('[Auth Context Listener] Auth state unchanged, skipping profile fetch.');
+        // Still ensure loading is false
+        if (isMounted && loading) {
           setLoading(false);
         }
       }
@@ -106,16 +179,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Remove the initial check IIFE - rely solely on the listener now
     // (async () => { ... })();
 
-    // Initial check is implicitly handled by the listener potentially firing with INITIAL_SESSION or SIGNED_IN
-    // We might need to set loading=false if the listener doesn't fire quickly on initial load *without* a session
-    // Let's add a small delay to handle the "no session on initial load" case
+    // Add a more robust timeout mechanism to ensure we exit loading state
+    // even if auth callbacks don't fire as expected
     const initialLoadTimer = setTimeout(() => {
-      if (isMounted && loading && !authUser) {
-        console.log('[Auth Context Effect] Timeout: Still loading and no authUser after delay. Setting loading=false.');
-        setLoading(false);
-        setUser(null); // Ensure user is null
+      if (isMounted && loading) {
+        console.log('[Auth Context Effect] Timeout: Still loading after delay. Setting loading=false.');
+        
+        // After timeout, directly check session state again to be sure
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (isMounted) {
+            const finalUser = session?.user ?? null;
+            if (finalUser && !authUser) {
+              // We have a session but no authUser set - fix the state
+              setAuthUser(finalUser);
+              // Try one more time to fetch profile
+              fetchUserProfile(finalUser).then(profile => {
+                if (isMounted) {
+                  setUser(profile);
+                  setLoading(false);
+                }
+              }).catch(() => {
+                if (isMounted) {
+                  setLoading(false);
+                }
+              });
+            } else {
+              // No session or already processed, ensure loading is false
+              setLoading(false);
+            }
+          }
+        }).catch(error => {
+          console.error('[Auth Context Effect] Final session check error:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+        });
       }
-    }, 1500); // Wait 1.5 seconds for listener or initial session
+    }, 2000); // Increased from 1.5s to 2s to give auth more time
 
 
     return () => {
@@ -213,9 +313,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       console.log('Attempting to sign out...')
+      
+      // Clear the user state before signing out to avoid race conditions
+      setUser(null);
+      setAuthUser(null);
+      
       const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      router.push('/auth/signin')
+      if (error) {
+        console.error('Sign out error:', error)
+        throw error
+      }
+      
+      // Use a timeout before redirect to give the signOut time to complete
+      setTimeout(() => {
+        console.log('Sign out successful, redirecting after delay...')
+        router.push('/auth/signin')
+      }, 300);
     } catch (error) {
       console.error('Sign out error:', error)
       throw error

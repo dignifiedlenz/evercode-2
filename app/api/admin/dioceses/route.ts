@@ -42,12 +42,12 @@ async function verifyAdmin(supabase: any) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     console.log('Admin Dioceses API: GET request received')
     
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const cookiesInstance = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookiesInstance })
     
     const { authorized, error } = await verifyAdmin(supabase)
     if (!authorized) {
@@ -93,8 +93,8 @@ export async function POST(request: Request) {
   try {
     console.log('Admin Dioceses API: POST request received')
     
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const cookiesInstance = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookiesInstance })
     
     const { authorized, error } = await verifyAdmin(supabase)
     if (!authorized) {

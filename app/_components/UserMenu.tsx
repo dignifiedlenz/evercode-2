@@ -18,7 +18,7 @@ const UserMenu: React.FC = () => {
     const router = useRouter();
 
     // Add console log for debugging
-    console.log('UserMenu Render:', { loading, user });
+    console.log('UserMenu Render:', { loading, user, hasUser: !!user });
 
     // Hardcoded menu items
     const menuItems = [
@@ -48,10 +48,19 @@ const UserMenu: React.FC = () => {
         }
     };
 
+    // Return empty div instead of null to prevent layout shifts
     if (loading || !user) {
-        // Add log before returning null
-        console.log('UserMenu: Returning null because loading or no user.', { loading, hasUser: !!user });
-        return null;
+        // Add log before returning placeholder
+        console.log('UserMenu: Returning placeholder because loading or no user.', { loading, hasUser: !!user });
+        // Return an empty div instead of null to maintain layout structure
+        return (
+            <div className="fixed top-3 right-3 sm:right-6 sm:top-6 z-50">
+                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/20">
+                    {/* Loading indicator */}
+                    {loading && <div className="w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>}
+                </div>
+            </div>
+        );
     }
 
     // --- Get Avatar URL --- 

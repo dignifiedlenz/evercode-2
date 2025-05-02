@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   try {
     console.log('Admin Move User API: POST request received')
     
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     const { authorized, error, user: adminUser } = await verifyAdmin(supabase)

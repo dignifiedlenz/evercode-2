@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import RegionDashboardClient from "./RegionDashboardClient";
 
-export default async function RegionDashboard({ params }: { params: { id: string } }) {
+export default async function RegionDashboard(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Fetch region data with all related information
     const region = await prisma.region.findUnique({
