@@ -18,31 +18,32 @@ export async function getOrCreateNote(chapterId: string, unitId: string, timesta
     const chapter = courseData.flatMap(sem => sem.chapters).find(ch => ch.id === chapterId)
     const chapterTitle = chapter?.title || 'Untitled Chapter'
 
-    // Try to find existing note
-    const { data: existingNote, error: fetchError } = await supabase
+    // Try to find existing note for this chapter, ignoring unit_id
+    const { data: existingNotes, error: fetchError } = await supabase
       .from('notes')
       .select('id, content')
       .eq('chapter_id', chapterId)
-      .eq('unit_id', unitId)
       .eq('user_id', session.user.id)
-      .single()
+      .order('created_at', { ascending: false })
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found" error
+    if (fetchError) {
       console.error('Fetch error:', fetchError)
       throw fetchError
     }
 
-    if (existingNote) {
-      return { note: existingNote }
+    // If any note exists for this chapter, use the most recent one
+    if (existingNotes && existingNotes.length > 0) {
+      console.log(`Found existing note for chapter ${chapterId}`);
+      return { note: existingNotes[0] }
     }
 
-    // Create new note if none exists
+    // Create new note if none exists for this chapter
     const { data: newNote, error: createError } = await supabase
       .from('notes')
       .insert([
         {
           chapter_id: chapterId,
-          unit_id: unitId,
+          unit_id: unitId, // Still store which unit created it initially
           content: {
             type: 'doc',
             content: [
@@ -73,6 +74,7 @@ export async function getOrCreateNote(chapterId: string, unitId: string, timesta
       console.error('Create error:', createError)
       throw createError
     }
+    console.log(`Created new note for chapter ${chapterId}`);
     return { note: newNote }
   } catch (error) {
     console.error('Error in getOrCreateNote:', error)
