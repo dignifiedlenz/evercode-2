@@ -20,7 +20,7 @@ const UNKNOWN_ERROR = 'An unknown error occurred.';
 // Get the authenticated Supabase user ID
 async function getAuthenticatedSupabaseUserId() {
   try {
-    const supabase = createServerActionClient({ cookies }); 
+    const supabase = createServerActionClient({ cookies: () => cookies() }); 
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
@@ -47,7 +47,7 @@ export async function getUserProgress() {
     return { error: authResult.error };
   }
   const { userId: authId } = authResult;
-  const supabase = createServerActionClient({ cookies });
+  const supabase = createServerActionClient({ cookies: () => cookies() });
 
   try {
     // Fetch progress from all relevant tables in parallel
@@ -95,7 +95,7 @@ export async function saveVideoProgress(data: {
     return { error: authResult.error };
   }
   const { userId: authId } = authResult;
-  const supabase = createServerActionClient({ cookies });
+  const supabase = createServerActionClient({ cookies: () => cookies() });
 
   try {
     const upsertData = {
@@ -142,7 +142,7 @@ export async function saveQuestionProgress({
   const authResult = await getAuthenticatedSupabaseUserId();
   if ('error' in authResult) return { error: authResult.error };
   const { userId: authId } = authResult; // authId is uuid
-  const supabase = createServerActionClient({ cookies });
+  const supabase = createServerActionClient({ cookies: () => cookies() });
 
   try {
     // ---- CHECK USER EXISTS IN PUBLIC.USER TABLE ----
@@ -212,7 +212,7 @@ export async function saveUnitProgress(data: {
     return { error: authResult.error };
   }
   const { userId: authId } = authResult;
-  const supabase = createServerActionClient({ cookies });
+  const supabase = createServerActionClient({ cookies: () => cookies() });
 
   let updateData: Partial<{
       userId: string;
@@ -262,7 +262,7 @@ export async function resetUserProgress() {
     return { error: authResult.error };
   }
   const { userId: authId } = authResult;
-  const supabase = createServerActionClient({ cookies });
+  const supabase = createServerActionClient({ cookies: () => cookies() });
 
   try {
     // Delete records from all progress tables for the user

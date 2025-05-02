@@ -8,9 +8,8 @@ export default async function CoursePage() {
   // Log the rendering of the course page
   console.log('Rendering course page');
   
-  // Check authentication first with proper cookie handling
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  // Pass cookies directly via function
+  const supabase = createServerComponentClient({ cookies: () => cookies() });
   
   // Use getUser() for more secure session handling
   const { data: { user }, error: userError } = await supabase.auth.getUser();

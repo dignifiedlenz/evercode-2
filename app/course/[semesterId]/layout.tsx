@@ -1,159 +1,171 @@
-// REMOVED "use client"; This is now a Server Component
-
-import { cookies } from 'next/headers'; // For server client
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { redirect } from 'next/navigation';
-import UserMenu from '@/app/_components/UserMenu'; // Use absolute paths
+// Remove 'use client'
+// import { useParams, redirect, useRouter } from 'next/navigation'; // Remove client hooks
+// import { useState, useEffect, useMemo } from 'react'; // Remove client hooks
+import { cookies } from 'next/headers'; // Import server cookies
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'; // Import server client
+import { redirect } from 'next/navigation'; // Keep redirect
+import UserMenu from '@/app/_components/UserMenu';
 import LogoSection from '@/app/_components/LogoSection';
 import courseData from "@/app/_components/(semester1)/courseData";
 import Sidebar from '@/app/_components/sidebar';
+// import { useAuth } from '@/context/AuthContext'; // Remove client auth context
 
-// Helper function defined locally
+// Helper for safe stringify (optional, can remove if not debugging complex errors)
 function safeStringifyError(error: any): string {
   try {
-    return JSON.stringify({
-      message: error?.message || 'No message',
-      name: error?.name || 'Unknown error',
-      code: error?.code || 'No code',
-      details: error?.details || 'No details',
-      hint: error?.hint || 'No hint',
-      stack: error?.stack || 'No stack trace'
-    }, null, 2);
-  } catch (e) {
-    return `Error stringifying error: ${e}`;
+    return JSON.stringify(error, Object.getOwnPropertyNames(error));
+  } catch {
+    return `Could not stringify error: ${error?.message || 'Unknown error'}`;
   }
 }
 
+
 interface LayoutProps {
   children: React.ReactNode;
-  params: { semesterId: string }; // <-- Expect resolved params
+  params: { semesterId: string }; // Get params directly
 }
 
-export default async function SemesterLayout({ children, params }: LayoutProps) {
-  // --- Authentication and Data Fetching (Moved from outer layout) --- 
+// Make the layout an async function
+export default async function SemesterLayout({ children, params: paramsProp }: LayoutProps) {
+  
+  // --- Await props only --- 
+  const params = await paramsProp; 
+  // const cookieStore = await cookies(); // Revert explicit await
+  // --- End Await --- 
+
+  let user = null;
+  let dbUser = null;
+  let initialCompletedUnits: Record<string, boolean> = {}; // Default empty
+
   try {
-    console.log('Rendering [semesterId] layout with params:', params);
+    console.log('[Server Layout] Rendering with awaited params:', params);
 
-    const cookieStore = cookies();
-    const supabase = createServerComponentClient({ cookies: () => cookieStore });
+    // Revert to documented way: Pass cookies() directly via function
+    const supabase = createServerComponentClient({ cookies: () => cookies() });
 
-    // Auth check
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log('[semesterId] Layout User check:', { hasUser: !!user, userId: user?.id });
-    if (userError || !user) {
-      console.error('[semesterId] Layout Auth error/no user:', userError ? safeStringifyError(userError) : 'No user');
+    // Perform auth check server-side
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    console.log('[Server Layout] Auth check result:', { hasUser: !!authUser, userId: authUser?.id });
+
+    if (userError || !authUser) {
+      console.error('[Server Layout] Auth error or no user:', userError ? safeStringifyError(userError) : 'No user');
       redirect('/auth/signin');
     }
+    
+    // Assign the authenticated user
+    user = authUser; 
 
-    // Check user in DB / Create if not exists (Optional, but kept from previous logic)
-    const { data: dbUser, error: dbError } = await supabase
+    // --- Re-enable DB user check/creation ---
+    console.log('[Server Layout] Checking user in DB...');
+    const { data: foundDbUser, error: dbError } = await supabase
       .from('User')
       .select('*')
       .eq('auth_id', user.id)
       .single();
-    if (dbError && dbError.code !== 'PGRST116') {
-      console.error('[semesterId] Layout DB error:', safeStringifyError(dbError));
-      redirect('/auth/signin');
+
+    if (dbError && dbError.code !== 'PGRST116') { // Ignore 'not found' error PGRST116
+      console.error('[Server Layout] Error fetching user from DB:', safeStringifyError(dbError));
+      // Optional: redirect to an error page or handle differently
+      redirect('/auth/signin?error=database_error'); 
     }
-    if (!dbUser) {
-      console.log('[semesterId] Layout: User not found in DB, creating...');
-      const { error: createError } = await supabase.from('User').insert(/* ... user data ... */{
+
+    if (!foundDbUser) {
+      console.log('[Server Layout] User not found in DB, creating...');
+      const { data: createdUser, error: createError } = await supabase.from('User').insert({
          auth_id: user.id,
          email: user.email, 
-         role: 'STUDENT',
+         role: 'USER', // Ensure this matches your enum
          firstName: user.user_metadata?.firstName || '', 
          lastName: user.user_metadata?.lastName || ''
-      });
-      if (createError) {
-        console.error('[semesterId] Layout: Error creating user:', safeStringifyError(createError));
-        redirect('/auth/signin');
-      }
-    }
-    
-    // Get currentSemester from resolved params
-    const semesterId = params.semesterId; // Use directly
-    const currentSemester = semesterId ? parseInt(semesterId.replace('semester-', ''), 10) : 1;
+      }).select().single(); // Select the created user data
 
-    // Fetch Progress (moved here)
+      if (createError) {
+         console.error('[Server Layout] Error creating user:', safeStringifyError(createError));
+         // Optional: redirect to an error page or handle differently
+         redirect('/auth/signin?error=user_creation_failed');
+      }
+      console.log('[Server Layout] User created in DB:', createdUser);
+      dbUser = createdUser; // Use the newly created user data
+    } else {
+      console.log('[Server Layout] User found in DB:', foundDbUser);
+      dbUser = foundDbUser; // Use the found user data
+    }
+    // --- End DB user check/creation ---
+
+
+    // --- Re-enable Progress Fetch ---
+    console.log('[Server Layout] Fetching initial progress...');
     const { data: progressData, error: progressError } = await supabase
         .from('UnitProgress')
-        .select('unitId, videoCompleted, questionsCompleted, totalQuestions')
-        .eq('userId', user.id)
-        // Add your completion logic filters here if needed
-        // .eq('videoCompleted', true)
-        // .gte('questionsCompleted', 5); 
+        .select('unitId, videoCompleted, questionsCompleted, totalQuestions') // Select necessary fields
+        .eq('userId', user.id); // Use the authenticated user's ID
 
     if (progressError) {
-        console.error('[semesterId] Layout: Error fetching progress:', progressError);
+        console.error('[Server Layout] Error fetching progress:', safeStringifyError(progressError));
+        // Don't fail the whole page load, just log and continue with empty progress
+        initialCompletedUnits = {};
+    } else {
+        // Process progress data to create the initialCompletedUnits map
+        initialCompletedUnits = progressData.reduce((acc, unit) => {
+            // Consider a unit complete if video is watched AND all questions answered
+            const isComplete = unit.videoCompleted && unit.questionsCompleted >= unit.totalQuestions;
+            acc[unit.unitId] = isComplete;
+            return acc;
+        }, {} as Record<string, boolean>);
+        console.log(`[Server Layout] Initial progress fetched. ${Object.keys(initialCompletedUnits).length} units processed.`);
     }
-    const completedUnits = progressData?.reduce((acc, unit) => {
-        // Define completion logic
-        if (unit.videoCompleted && unit.questionsCompleted >= (unit.totalQuestions || 5)) {
-           acc[unit.unitId] = true;
-        }
-        return acc;
-    }, {} as Record<string, boolean>) || {};
+    // --- End Progress Fetch ---
 
-    // Get Background Image data
-    const semester = courseData.find(sem => sem.id === `semester-${currentSemester}`);
-    const backgroundImage = semester?.backgroundImage || '/540598ldsdl.jpg'; // Default BG
-
-    // --- Render Structure --- 
-    return (
-      <div className="relative min-h-screen w-full bg-black/75"> 
-        {/* Background Image - Restore fixed position and z-index */}
-        <div 
-          className="fixed inset-0 w-full h-full"
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            zIndex: 1
-          }}
-        />
-
-        {/* Radial Vignette Overlay - Restore this */}
-        <div 
-          className="fixed inset-0 w-full h-full"
-          style={{
-            background: `radial-gradient(circle at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.95) 100%)`,
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            zIndex: 2
-          }}
-        />
-
-        {/* Render Components (Moved here) - Need to ensure they appear above the overlay */}
-        <div className="relative z-10"> 
-            <LogoSection semesterId={semesterId} /> 
-            <UserMenu /> 
-            <Sidebar 
-              courseData={courseData}
-              currentSemester={currentSemester}
-              completedUnits={completedUnits}
-            />
-
-            {/* Main Content - Also needs to be within the z-10 wrapper */}
-            <main className="relative min-h-screen w-full">{children}</main>
-        </div>
-
-      </div>
-    );
 
   } catch (error) {
-    console.error('Unexpected error in [semesterId] layout:', {
-      error: safeStringifyError(error),
-      params,
-      timestamp: new Date().toISOString()
-    });
-    return (
-      <div className="error-state">
-        <h1>Semester Layout Error</h1>
-        <p>Something went wrong.</p>
-      </div>
-    );
+     console.error('[Server Layout] UNEXPECTED CATCH BLOCK:', safeStringifyError(error));
+     // Redirect on unexpected errors during server-side setup
+     redirect('/auth/signin?error=unexpected_layout_error');
   }
+
+  // Extract semester details from awaited params
+  const semesterId = params.semesterId;
+  const currentSemester = semesterId ? parseInt(semesterId.replace('semester-', ''), 10) : 1;
+  const semester = courseData.find(sem => sem.id === `semester-${currentSemester}`);
+  const backgroundImage = semester?.backgroundImage || '/540598ldsdl.jpg';
+
+  return (
+    <div className="relative min-h-screen w-full bg-black/75">
+      {/* Background Image */}
+      <div 
+        className="fixed inset-0 w-full h-full"
+        style={{
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          zIndex: 1 // Lower z-index than content
+        }}
+      />
+      {/* Vignette Overlay */}
+      <div 
+        className="fixed inset-0 w-full h-full"
+        style={{
+          background: `radial-gradient(circle at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.95) 100%)`,
+          zIndex: 2 // Between background and content
+        }}
+      />
+
+      {/* Content Area with higher z-index */}
+      <div className="relative z-10"> 
+        {/* Components now receive data via props if needed, or use client context */}
+        <LogoSection semesterId={semesterId} /> 
+        {/* UserMenu might still use useAuth client-side, which is fine */}
+        <UserMenu /> 
+        <Sidebar 
+          courseData={courseData} 
+          currentSemester={currentSemester} 
+          // Pass initial progress state needed by Sidebar directly
+          // Note: Sidebar might *also* use useProgress client-side for updates
+          completedUnits={initialCompletedUnits}
+        />
+        <main className="relative min-h-screen w-full">{children}</main>
+      </div>
+    </div>
+  );
 } 

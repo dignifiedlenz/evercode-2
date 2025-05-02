@@ -21,11 +21,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authUser, setAuthUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  // Log environment variables (ensure they are defined client-side)
+  console.log('[Auth Context] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('[Auth Context] Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Loaded' : 'MISSING!');
+
   const supabase = createClientComponentClient()
 
   const fetchUserProfile = async (supabaseAuthUser: SupabaseUser) => {
+    console.log('[fetchUserProfile] Attempting fetch for:', supabaseAuthUser.id);
     try {
-      console.log('Fetching profile for auth user:', supabaseAuthUser.id)
       const { data: userData, error: userError } = await supabase
         .from('User')
         .select('*')
@@ -33,65 +38,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (userError) {
-        if (userError.code !== 'PGRST116') {
-          console.error('Error fetching user profile:', userError)
+        if (userError.code === 'PGRST116') {
+          console.log('[fetchUserProfile] Profile not found (PGRST116), returning null.');
         } else {
-          console.log('User profile not found (PGRST116), potentially new user.')
+          console.error('[fetchUserProfile] Error fetching profile:', userError);
         }
-        return null
+        return null; // Return null on error or not found
       }
-      console.log('User profile fetched:', userData)
-      return userData
+      console.log('[fetchUserProfile] Profile fetched successfully:', userData);
+      return userData;
     } catch (error) {
-      console.error('Unexpected error fetching profile:', error)
-      return null
+      console.error('[fetchUserProfile] Unexpected error during fetch:', error);
+      return null; // Return null on unexpected errors
     }
   }
 
   useEffect(() => {
-    let isMounted = true
-    setLoading(true)
+    let isMounted = true;
+    console.log('[Auth Context Effect] Initializing.');
+    setLoading(true); // Reset loading state on mount
 
-    console.log('[Auth Context Effect] Running effect, setting up listener.')
-
+    console.log('[Auth Context Effect] Setting up onAuthStateChange listener.');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return
+      console.log('[Auth Context Listener] Fired! Event:', event, 'Has Session:', !!session);
+      if (!isMounted) {
+        console.log('[Auth Context Listener] Unmounted, skipping update.');
+        return;
+      }
       
-      console.log('[Auth Context Listener] State changed:', { event, hasSession: !!session })
-
-      const currentSupabaseUser = session?.user ?? null
-      setAuthUser(currentSupabaseUser)
+      const currentSupabaseUser = session?.user ?? null;
+      setAuthUser(currentSupabaseUser);
 
       if (currentSupabaseUser) {
-        try {
-          const profile = await fetchUserProfile(currentSupabaseUser)
-          if (isMounted) {
-            setUser(profile)
-            console.log('[Auth Context Listener] Profile fetched, setting loading to false')
-            setLoading(false)
+        console.log('[Auth Context Listener] User found via listener, attempting to fetch profile...');
+        // Fetch profile ONLY IF the user is different from the current one,
+        // or if the user state is currently null (initial load or after sign out)
+        // This check might be overly complex, let's simplify for now and just fetch
+        // if (currentSupabaseUser.id !== user?.auth_id || !user) {
+          try {
+            const profile = await fetchUserProfile(currentSupabaseUser);
+            if (isMounted) {
+              setUser(profile);
+              console.log('[Auth Context Listener] Profile fetch complete via listener. Setting loading=false.');
+              setLoading(false);
+            }
+          } catch (error) {
+            console.error('[Auth Context Listener] Error calling fetchUserProfile:', error);
+            if (isMounted) {
+              setUser(null);
+              console.log('[Auth Context Listener] Error case via listener, setting loading=false.');
+              setLoading(false);
+            }
           }
-        } catch (error) {
-          console.error('[Auth Context Listener] Error fetching profile:', error)
-          if (isMounted) {
-            setUser(null)
-            setLoading(false)
-          }
-        }
+        // } else {
+        //   console.log('[Auth Context Listener] Listener fired, but user unchanged. Ensuring loading is false.');
+        //   if (isMounted && loading) setLoading(false); // Ensure loading is false if user is already set
+        // }
       } else {
+        console.log('[Auth Context Listener] No session/user found via listener. Setting user=null, loading=false.');
         if (isMounted) {
-          setUser(null)
-          console.log('[Auth Context Listener] No session, setting loading to false')
-          setLoading(false)
+          setUser(null);
+          setLoading(false);
         }
       }
-    })
+    });
+
+    // Remove the initial check IIFE - rely solely on the listener now
+    // (async () => { ... })();
+
+    // Initial check is implicitly handled by the listener potentially firing with INITIAL_SESSION or SIGNED_IN
+    // We might need to set loading=false if the listener doesn't fire quickly on initial load *without* a session
+    // Let's add a small delay to handle the "no session on initial load" case
+    const initialLoadTimer = setTimeout(() => {
+      if (isMounted && loading && !authUser) {
+        console.log('[Auth Context Effect] Timeout: Still loading and no authUser after delay. Setting loading=false.');
+        setLoading(false);
+        setUser(null); // Ensure user is null
+      }
+    }, 1500); // Wait 1.5 seconds for listener or initial session
+
 
     return () => {
-      console.log('[Auth Context Effect] Cleaning up listener')
-      isMounted = false
-      subscription.unsubscribe()
-    }
-  }, [supabase])
+      console.log('[Auth Context Effect] Cleaning up listener.');
+      isMounted = false;
+      subscription.unsubscribe();
+      clearTimeout(initialLoadTimer); // Clear the timeout
+    };
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     try {
