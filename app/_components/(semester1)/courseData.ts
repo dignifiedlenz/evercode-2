@@ -508,16 +508,16 @@ export const courseData: Semester[] = [
       },
       {
         id: "chapter-3",
-        title: "The Creed - continued",
-        description: "Learn the fundamentals of JavaScript programming",
+        title: "Who is God?",
+        description: "Learn about the nature of God and His relationship to the world.",
         backgroundImage: "/310282rg.jpg",
         units: [
           {
             id: "unit-8",
-            title: "The Creed - continued (Part One)",
+            title: "Who is God? (Part One)",
             video: {
               id: "video-8",
-              title: "The Creed - continued (Part One)",
+              title: "Who is God? (Part One)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.5.1+Small.mp4",
               questions: [
                 {
@@ -576,10 +576,10 @@ export const courseData: Semester[] = [
           },
           {
             id: "unit-9",
-            title: "The Creed - continued (Part Two)",
+            title: "Who is God? (Part Two)",
             video: {
               id: "video-9",
-              title: "The Creed - continued (Part Two)",
+              title: "Who is God? (Part Two)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.5.2+Small.mp4",
               questions: [
                 {
@@ -638,10 +638,10 @@ export const courseData: Semester[] = [
           },
           {
             id: "unit-10",
-            title: "The Creed - continued (Part Three)",
+            title: "Who is God? (Part Three)",
             video: {
               id: "video-10",
-              title: "The Creed - continued (Part Three)",
+              title: "Who is God? (Part Three)",
               videoUrl: "https://d3umrizzn3mmk.cloudfront.net/1.5.3+Small.mp4",
               questions: [
                 {

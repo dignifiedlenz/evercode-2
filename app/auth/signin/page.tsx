@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { AuthLogo } from '@/app/_components/_media/authLogo'
 import { Suspense } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/app/lib/supabase'
 
 function SignInForm() {
   const router = useRouter();

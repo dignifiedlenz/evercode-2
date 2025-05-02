@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Suspense } from "react";
-import { supabase } from "@/lib/supabase";
+import { Suspense } from "react"; 
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export const dynamic = 'force-dynamic';
 
 export default function ProfilePage() {
+  const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -56,14 +57,14 @@ export default function ProfilePage() {
           setFirstName(data.firstName || "");
           setLastName(data.lastName || "");
         } catch (err: unknown) {
-          if (err instanceof Error) {
-            console.error(err.message);
-            setErrorMsg(err.message);
-          } else {
-            console.error("Unexpected error:", err);
-            setErrorMsg("An unexpected error occurred.");
+            if (err instanceof Error) {
+              console.error(err.message);
+              setErrorMsg(err.message);
+            } else {
+              console.error("Unexpected error:", err);
+              setErrorMsg("An unexpected error occurred.");
+            }
           }
-        }
       }
     }
     if (user) {
@@ -96,14 +97,14 @@ export default function ProfilePage() {
       setOldPassword("");
       setNewPassword("");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error(err.message);
-        setErrorMsg(err.message);
-      } else {
-        console.error("Unexpected error:", err);
-        setErrorMsg("An unexpected error occurred.");
+        if (err instanceof Error) {
+          console.error(err.message);
+          setErrorMsg(err.message);
+        } else {
+          console.error("Unexpected error:", err);
+          setErrorMsg("An unexpected error occurred.");
+        }
       }
-    }
   }
 
   const handleBackToDashboard = () => {
@@ -116,72 +117,72 @@ export default function ProfilePage() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="flex flex-col items-center justify-center min-h-screen text-black">
-        <div
-          className="
-            pl-56
-            w-[120vw]
-            h-[120vh]
-            absolute
-            inset-0
-            bg-cover
-            bg-center
-            opacity-35
-            pointer-events-none
-            transition-all
-            duration-100
-            -z-10
-          "
-          style={{
-            backgroundImage: `url('/532328ldsdl.jpg')`,
-          }}
+    <div className="flex flex-col items-center justify-center min-h-screen text-black">
+<div
+        className="
+          pl-56
+          w-[120vw]
+          h-[120vh]
+          absolute
+          inset-0
+          bg-cover
+          bg-center
+          opacity-35
+          pointer-events-none
+          transition-all
+          duration-100
+          -z-10
+        "
+        style={{
+          backgroundImage: `url('/532328ldsdl.jpg')`,
+        }}
+      />
+      <h1 className="text-2xl mb-4 text-white font-custom1">Update your Credentials</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-64">
+        <input
+          type="text"
+          placeholder="First Name"
+          className="border px-3 py-2"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
         />
-        <h1 className="text-2xl mb-4 text-white font-custom1">Update your Credentials</h1>
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-64">
-          <input
-            type="text"
-            placeholder="First Name"
-            className="border px-3 py-2"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Last Name"
-            className="border px-3 py-2"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Old Password"
-            className="border px-3 py-2"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="New Password"
-            className="border px-3 py-2"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="bg-secondary text-black py-2 hover:bg-secondary-foreground transition-all"
-          >
-            Update Profile
-          </button>
-          <button
-            onClick={handleBackToDashboard}
-            className="mt-6 px-4 py-2 rounded text-white hover:bg-white hover:text-black hover:pr-10 transition-all"
-          >
-            ← Back to Dashboard
-          </button>
-        </form>
-        {errorMsg && <p className="mt-2 text-red-800">{errorMsg}</p>}
-        {successMsg && <p className="mt-2 text-secondary">{successMsg}</p>}
-      </div>
+        <input
+          type="text"
+          placeholder="Last Name"
+          className="border px-3 py-2"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Old Password"
+          className="border px-3 py-2"
+          value={oldPassword}
+          onChange={(e) => setOldPassword(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="New Password"
+          className="border px-3 py-2"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="bg-secondary text-black py-2 hover:bg-secondary-foreground transition-all"
+        >
+          Update Profile
+        </button>
+        <button
+        onClick={handleBackToDashboard}
+        className="mt-6 px-4 py-2 rounded text-white hover:bg-white hover:text-black hover:pr-10 transition-all"
+      >
+        ← Back to Dashboard
+      </button>
+      </form>
+      {errorMsg && <p className="mt-2 text-red-800">{errorMsg}</p>}
+      {successMsg && <p className="mt-2 text-secondary">{successMsg}</p>}
+    </div>
     </Suspense>
   );
 }

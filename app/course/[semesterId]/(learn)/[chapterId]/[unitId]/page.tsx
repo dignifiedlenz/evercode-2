@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { motion, useTransform, useSpring } from "framer-motion";
-import ScrollNavigator from "../../components/ScrollNavigator";
 import VideoPlayer from "./video/page";
 import Quiz from "./quiz/page";
 import { useParams, usePathname } from "next/navigation";
@@ -73,13 +72,6 @@ export default function UnitPage() {
         </motion.div>
       )}
 
-      <ScrollNavigator
-        onUpClick={handleUpClick}
-        onDownClick={handleDownClick}
-        currentSection={currentSection}
-        threshold={0.75}
-        onScrollProgressChange={handleScrollProgressChange}
-      />
     </div>
   );
 } 

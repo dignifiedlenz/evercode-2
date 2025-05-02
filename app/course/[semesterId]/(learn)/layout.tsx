@@ -1,6 +1,5 @@
 "use client";
 
-import ScrollNavigator from "./components/ScrollNavigator";
 import ProgressBar from "./components/ProgressBar";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import courseData from "@/app/_components/(semester1)/courseData";
@@ -175,13 +174,6 @@ export default function LearnLayout({
   return (
     <div className="relative min-h-screen">
       {children}
-      <div className="hidden sm:block">
-        <ScrollNavigator
-          onUpClick={handleScrollUp}
-          onDownClick={handleScrollDown}
-          currentSection={currentSection}
-        />
-      </div>
       <ProgressBar
         currentChapterId={chapterId as string}
         currentUnitId={unitId as string}

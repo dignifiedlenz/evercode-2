@@ -9,9 +9,10 @@ import { getUserProgress, saveVideoProgress, saveUnitProgress } from "@/app/acti
 import { useProgress } from "@/app/_components/ProgressClient"; 
 import { toast } from 'sonner';
 import CustomLink from "@/app/_components/CustomLink";
-import { Play, Pause } from 'lucide-react'; // Import icons
+import { Play, Pause, Maximize, Minimize, StickyNote } from 'lucide-react'; // Import icons
 import UnitHeader from "../_components/UnitHeader";
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import VideoNotes from './_components/VideoNotes';
 
 // Helper function to format time (e.g., 01:30)
 const formatTime = (timeInSeconds: number): string => {
@@ -36,6 +37,7 @@ export default function VideoPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [videoAspectRatio, setVideoAspectRatio] = useState<number>(16/9); // Default to 16:9
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { 
     progress: progressData, 
@@ -265,24 +267,45 @@ export default function VideoPage() {
 
   const showCompletionBanner = progressData?.unitProgress?.find(up => up.unitId === unitId)?.videoCompleted === true;
 
+  // Handle fullscreen
+  const toggleFullscreen = useCallback(() => {
+    if (!playerContainerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      playerContainerRef.current.requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch(err => console.error('Error attempting to enable fullscreen:', err));
+    } else {
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(err => console.error('Error attempting to exit fullscreen:', err));
+    }
+  }, []);
+
+  // Update fullscreen state on change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   return (
-    <div className="relative min-h-screen pb-24">
+    <div className="relative min-h-screen">
       <UnitHeader />
-      <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
-        <div className="w-full max-w-4xl mx-auto">
+      <div className="absolute inset-0 pt-24 flex items-center justify-center">
           <div 
             ref={playerContainerRef}
             className="relative group bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-2xl"
             style={{ 
-              maxWidth: '75vw'
+            maxWidth: '75vw',
+            width: '100%'
             }}
           >
             {/* Video Section */}
-            <div 
-              className={`relative w-full transition-all duration-300 ${
-                isNotesOpen ? 'h-1/2' : 'h-full'
-              }`}
-            >
+          <div className="relative w-full h-full">
               {(isLoading || isLoadingProgress) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
                   <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-white"></div>
@@ -315,27 +338,53 @@ export default function VideoPage() {
 
               {/* Custom Controls Overlay */}
               <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-40">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <button onClick={togglePlayPause} className="text-white p-1 focus:outline-none focus:ring-2 focus:ring-secondary rounded">
-                    {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                  </button>
-                  <span className="text-white text-xs font-mono select-none w-10 text-center">
-                    {formatTime(currentTime)}
-                  </span>
+              <div className="flex flex-col gap-2">
+                {/* Progress bar */}
                   <input 
                     type="range"
                     min="0"
                     max={duration || 0}
                     value={currentTime || 0}
                     onChange={handleSeek}
-                    className="flex-grow h-1 sm:h-[5px] rounded-full cursor-pointer appearance-none bg-white/30 accent-secondary"
+                  className="w-full h-1 sm:h-[5px] rounded-full cursor-pointer appearance-none bg-white/30 accent-secondary"
                     style={{
                       background: `linear-gradient(to right, var(--color-secondary) ${((currentTime / duration) * 100) || 0}%, rgba(255, 255, 255, 0.3) ${((currentTime / duration) * 100) || 0}%)`
                     }}
                   />
-                  <span className="text-white text-xs font-mono select-none w-10 text-center">
-                    {formatTime(duration)}
+                
+                {/* Controls row */}
+                <div className="flex items-center justify-between">
+                  {/* Left controls */}
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <button 
+                      onClick={togglePlayPause} 
+                      className="text-white p-1 hover:text-secondary focus:outline-none focus:ring-2 focus:ring-secondary rounded transition-colors"
+                    >
+                      {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+                    </button>
+                    <span className="text-white text-xs font-mono select-none">
+                      {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
+                  </div>
+
+                  {/* Right controls */}
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={() => setIsNotesOpen(!isNotesOpen)}
+                      className="text-white p-1 hover:text-secondary focus:outline-none focus:ring-2 focus:ring-secondary rounded transition-colors"
+                      title={isNotesOpen ? "Hide notes" : "Show notes"}
+                    >
+                      <StickyNote size={20} className={isNotesOpen ? "text-secondary" : ""} />
+                    </button>
+                    <button 
+                      onClick={toggleFullscreen}
+                      className="text-white p-1 hover:text-secondary focus:outline-none focus:ring-2 focus:ring-secondary rounded transition-colors"
+                      title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                    >
+                      {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                    </button>
+                  </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -346,40 +395,14 @@ export default function VideoPage() {
                 isNotesOpen ? 'h-[20vh] opacity-100' : 'h-0 opacity-0'
               }`}
             >
-              <div className="h-full w-full flex flex-col">
-                <div 
-                  className="flex items-center justify-between p-4 border-b border-white/10 cursor-pointer hover:bg-black/60"
-                  onClick={() => setIsNotesOpen(false)}
-                >
-                  <h3 className="text-secondary font-neima text-lg">Notes (Coming Soon)</h3>
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 px-4 py-2 bg-black/50 rounded-full hover:bg-black/70 text-white text-sm">
-                    <ChevronDown className="w-4 h-4" />
-                    <span>Hide Notes</span>
-                  </button>
-                </div>
-                <div 
-                  className="flex-1 p-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <textarea
-                    placeholder="Type your notes here..."
-                    className="w-full h-full bg-black/30 text-white placeholder-white/40 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
-                  />
-                </div>
-              </div>
-            </div>
+            {isNotesOpen && (
+              <VideoNotes 
+                chapterId={chapterId as string} 
+                unitId={unitId as string} 
+                timestamp={Math.floor(currentTime)}
+              />
+            )}
           </div>
-
-          {/* Notes Toggle Button - Always mounted but controlled by visibility */}
-          <button
-            onClick={() => setIsNotesOpen(true)}
-            className={`mt-4 mx-auto flex items-center gap-2 px-4 py-2 bg-black/20 hover:bg-black/50 rounded-full transition-all duration-300 text-white/40 hover:text-white text-sm group ${
-              isNotesOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}
-          >
-            <ChevronUp className="w-4 h-4" />
-            <span>Show Notes</span>
-          </button>
         </div>
       </div>
     </div>

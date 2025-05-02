@@ -27,7 +27,7 @@ const StaticElements = ({ backgroundImage }: { backgroundImage?: string }) => (
     )}
 
     {/* Chronological Mode Switch */}
-    <div className="fixed top-4 right-4 z-40">
+    <div className="fixed top-4 right-[6.25rem] z-40">
       <ChronologicalModeButton />
     </div>
   </>
@@ -36,18 +36,23 @@ const StaticElements = ({ backgroundImage }: { backgroundImage?: string }) => (
 // Separate component for the mode button to avoid unnecessary re-renders
 const ChronologicalModeButton = () => {
   const { isChronologicalMode, toggleChronologicalMode } = useChronologicalMode();
-  
   return (
-    <button
-      onClick={toggleChronologicalMode}
-      className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-        isChronologicalMode
-          ? "bg-secondary/20 text-secondary border border-secondary"
-          : "bg-white/10 text-white/70 hover:bg-white/20"
-      }`}
-    >
-      {isChronologicalMode ? "Chronological Mode: ON" : "Chronological Mode: OFF"}
-    </button>
+    <label className="flex items-center gap-2 cursor-pointer select-none">
+      <span className="text-white/80 text-sm">Chronological Mode</span>
+      <input
+        type="checkbox"
+        checked={isChronologicalMode}
+        onChange={toggleChronologicalMode}
+        className="sr-only"
+      />
+      <span
+        className={`w-10 h-6 flex items-center bg-white/20 rounded-full p-1 transition-colors duration-300 ${isChronologicalMode ? 'bg-secondary/60' : 'bg-white/20'}`}
+      >
+        <span
+          className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isChronologicalMode ? 'translate-x-4 bg-secondary' : ''}`}
+        />
+      </span>
+    </label>
   );
 };
 
